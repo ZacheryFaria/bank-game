@@ -4,40 +4,40 @@
  * POST /auth/login - Login existing user
  */
 
-import type { FastifyInstance } from 'fastify';
-import { z } from 'zod';
-import prisma from '../lib/db.js';
-import { hashPassword, verifyPassword, generateToken } from '../lib/auth.js';
-import { STARTING_EQUITY, MARKET_RATES } from '../engine/constants.js';
+import type { FastifyInstance } from 'fastify'
+import { z } from 'zod'
+import prisma from '../lib/db.js'
+import { hashPassword, verifyPassword, generateToken } from '../lib/auth.js'
+import { STARTING_EQUITY, MARKET_RATES } from '../engine/constants.js'
 
 const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
   bankName: z.string().min(1).max(100),
-});
+})
 
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string(),
-});
+})
 
-export async function authRoutes(fastify: FastifyInstance) {
+export function authRoutes(fastify: FastifyInstance) {
   // POST /auth/register
   fastify.post('/auth/register', async (request, reply) => {
     try {
-      const body = registerSchema.parse(request.body);
+      const body = registerSchema.parse(request.body)
 
       // Check if user already exists
       const existing = await prisma.user.findUnique({
         where: { email: body.email },
-      });
+      })
 
       if (existing) {
-        return reply.status(400).send({ error: 'Email already registered' });
+        return reply.status(400).send({ error: 'Email already registered' })
       }
 
       // Hash password
-      const passwordHash = await hashPassword(body.password);
+      const passwordHash = await hashPassword(body.password)
 
       // Create user and bank in transaction
       const user = await prisma.user.create({
@@ -76,13 +76,13 @@ export async function authRoutes(fastify: FastifyInstance) {
         include: {
           bank: true,
         },
-      });
+      })
 
       // Generate token
       const token = generateToken({
         userId: user.id,
         email: user.email,
-      });
+      })
 
       return reply.send({
         token,
@@ -91,20 +91,22 @@ export async function authRoutes(fastify: FastifyInstance) {
           email: user.email,
           bank: user.bank,
         },
-      });
+      })
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return reply.status(400).send({ error: 'Invalid input', details: error.errors });
+        return reply
+          .status(400)
+          .send({ error: 'Invalid input', details: error.errors })
       }
-      console.error('Registration error:', error);
-      return reply.status(500).send({ error: 'Internal server error' });
+      console.error('Registration error:', error)
+      return reply.status(500).send({ error: 'Internal server error' })
     }
-  });
+  })
 
   // POST /auth/login
   fastify.post('/auth/login', async (request, reply) => {
     try {
-      const body = loginSchema.parse(request.body);
+      const body = loginSchema.parse(request.body)
 
       // Find user
       const user = await prisma.user.findUnique({
@@ -112,23 +114,23 @@ export async function authRoutes(fastify: FastifyInstance) {
         include: {
           bank: true,
         },
-      });
+      })
 
       if (!user) {
-        return reply.status(401).send({ error: 'Invalid credentials' });
+        return reply.status(401).send({ error: 'Invalid credentials' })
       }
 
       // Verify password
-      const valid = await verifyPassword(body.password, user.passwordHash);
+      const valid = await verifyPassword(body.password, user.passwordHash)
       if (!valid) {
-        return reply.status(401).send({ error: 'Invalid credentials' });
+        return reply.status(401).send({ error: 'Invalid credentials' })
       }
 
       // Generate token
       const token = generateToken({
         userId: user.id,
         email: user.email,
-      });
+      })
 
       return reply.send({
         token,
@@ -137,13 +139,15 @@ export async function authRoutes(fastify: FastifyInstance) {
           email: user.email,
           bank: user.bank,
         },
-      });
+      })
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return reply.status(400).send({ error: 'Invalid input', details: error.errors });
+        return reply
+          .status(400)
+          .send({ error: 'Invalid input', details: error.errors })
       }
-      console.error('Login error:', error);
-      return reply.status(500).send({ error: 'Internal server error' });
+      console.error('Login error:', error)
+      return reply.status(500).send({ error: 'Internal server error' })
     }
-  });
+  })
 }

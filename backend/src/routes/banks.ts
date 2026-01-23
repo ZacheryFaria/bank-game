@@ -4,20 +4,20 @@
  * GET /banks/:id - View specific bank
  */
 
-import type { FastifyInstance} from 'fastify';
-import prisma from '../lib/db.js';
+import type { FastifyInstance } from 'fastify'
+import prisma from '../lib/db.js'
 
-export async function banksRoutes(fastify: FastifyInstance) {
+export function banksRoutes(fastify: FastifyInstance) {
   // GET /banks - List all banks
   fastify.get('/banks', async (request, reply) => {
-    const { page = 1, limit = 50, sortBy = 'equity' } = request.query as any;
+    const { page = 1, limit = 50, sortBy = 'equity' } = request.query as any
 
-    const skip = (Number(page) - 1) * Number(limit);
-    const take = Number(limit);
+    const skip = (Number(page) - 1) * Number(limit)
+    const take = Number(limit)
 
-    let orderBy: any = { currentEquity: 'desc' };
+    let orderBy: any = { currentEquity: 'desc' }
     if (sortBy === 'loans') {
-      orderBy = { currentLoans: 'desc' };
+      orderBy = { currentLoans: 'desc' }
     }
 
     const [banks, total] = await Promise.all([
@@ -36,7 +36,7 @@ export async function banksRoutes(fastify: FastifyInstance) {
         take,
       }),
       prisma.bank.count(),
-    ]);
+    ])
 
     return reply.send({
       banks,
@@ -46,12 +46,12 @@ export async function banksRoutes(fastify: FastifyInstance) {
         total,
         totalPages: Math.ceil(total / Number(limit)),
       },
-    });
-  });
+    })
+  })
 
   // GET /banks/:id - View specific bank
   fastify.get('/banks/:id', async (request, reply) => {
-    const { id } = request.params as { id: string };
+    const { id } = request.params as { id: string }
 
     const bank = await prisma.bank.findUnique({
       where: { id },
@@ -65,12 +65,12 @@ export async function banksRoutes(fastify: FastifyInstance) {
           },
         },
       },
-    });
+    })
 
     if (!bank) {
-      return reply.status(404).send({ error: 'Bank not found' });
+      return reply.status(404).send({ error: 'Bank not found' })
     }
 
-    return reply.send(bank);
-  });
+    return reply.send(bank)
+  })
 }

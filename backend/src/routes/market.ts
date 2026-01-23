@@ -3,10 +3,14 @@
  * GET /market/rates - Get fixed market rates (reference)
  */
 
-import type { FastifyInstance } from 'fastify';
-import { MARKET_RATES, LOAN_PRODUCTS, DEPOSIT_PRODUCTS } from '../engine/constants.js';
+import type { FastifyInstance } from 'fastify'
+import {
+  MARKET_RATES,
+  LOAN_PRODUCTS,
+  DEPOSIT_PRODUCTS,
+} from '../engine/constants.js'
 
-export async function marketRoutes(fastify: FastifyInstance) {
+export function marketRoutes(fastify: FastifyInstance) {
   // GET /market/rates
   fastify.get('/market/rates', async (request, reply) => {
     return reply.send({
@@ -18,12 +22,14 @@ export async function marketRoutes(fastify: FastifyInstance) {
         sensitivity: config.sensitivity,
         avgLoanSize: config.avgLoanSize,
       })),
-      depositProducts: Object.entries(DEPOSIT_PRODUCTS).map(([product, config]) => ({
-        product,
-        marketRate: config.marketRate,
-        baseInflowPerHour: config.baseInflowPerHour,
-        sensitivity: config.sensitivity,
-      })),
-    });
-  });
+      depositProducts: Object.entries(DEPOSIT_PRODUCTS).map(
+        ([product, config]) => ({
+          product,
+          marketRate: config.marketRate,
+          baseInflowPerHour: config.baseInflowPerHour,
+          sensitivity: config.sensitivity,
+        })
+      ),
+    })
+  })
 }

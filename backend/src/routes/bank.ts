@@ -6,35 +6,22 @@
  * POST   /bank/collect - Trigger collection (rate limited: 1/min)
  */
 
-import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { z } from 'zod';
-import prisma from '../lib/db.js';
-import { simulateCollection } from '../engine/CollectionSimulator.js';
-import { COLLECT_COOLDOWN_SECONDS } from '../engine/constants.js';
-import type { BankState } from '../engine/types.js';
+import type { FastifyInstance, FastifyRequest } from 'fastify'
+import { z } from 'zod'
+import prisma from '../lib/db.js'
+import { simulateCollection } from '../engine/CollectionSimulator.js'
+import { COLLECT_COOLDOWN_SECONDS } from '../engine/constants.js'
+import type { BankState } from '../engine/types.js'
 
 const updateRatesSchema = z.object({
   rates: z.record(z.string(), z.number().min(0).max(0.5)),
-});
+})
 
 const updateAllocationSchema = z.object({
   allocations: z.record(z.string(), z.number().min(0).max(1)),
-});
+})
 
-// Middleware to extract user from JWT
-async function requireAuth(request: FastifyRequest, reply: any) {
-  const authHeader = request.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return reply.status(401).send({ error: 'Unauthorized' });
-  }
-
-  // In a real app, verify JWT here
-  // For now, we'll skip token verification to keep it simple
-  const userId = 'mock-user-id'; // TODO: Extract from verified JWT
-  (request as any).userId = userId;
-}
-
-export async function bankRoutes(fastify: FastifyInstance) {
+export function bankRoutes(fastify: FastifyInstance) {
   // GET /bank
   fastify.get('/bank', async (request, reply) => {
     // TODO: Add auth middleware
@@ -50,24 +37,24 @@ export async function bankRoutes(fastify: FastifyInstance) {
           where: { currentBalance: { gt: 0 } },
         },
       },
-    });
+    })
 
     if (!bank) {
-      return reply.status(404).send({ error: 'Bank not found' });
+      return reply.status(404).send({ error: 'Bank not found' })
     }
 
-    return reply.send(bank);
-  });
+    return reply.send(bank)
+  })
 
   // PUT /bank/rates
   fastify.put('/bank/rates', async (request, reply) => {
     try {
-      const body = updateRatesSchema.parse(request.body);
+      const body = updateRatesSchema.parse(request.body)
 
       // TODO: Get bank ID from auth
-      const bank = await prisma.bank.findFirst();
+      const bank = await prisma.bank.findFirst()
       if (!bank) {
-        return reply.status(404).send({ error: 'Bank not found' });
+        return reply.status(404).send({ error: 'Bank not found' })
       }
 
       // Update rates
@@ -85,38 +72,43 @@ export async function bankRoutes(fastify: FastifyInstance) {
             product,
             rate,
           },
-        });
+        })
       }
 
       const updatedRates = await prisma.bankRate.findMany({
         where: { bankId: bank.id },
-      });
+      })
 
-      return reply.send({ success: true, rates: updatedRates });
+      return reply.send({ success: true, rates: updatedRates })
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return reply.status(400).send({ error: 'Invalid input', details: error.errors });
+        return reply
+          .status(400)
+          .send({ error: 'Invalid input', details: error.errors })
       }
-      console.error('Update rates error:', error);
-      return reply.status(500).send({ error: 'Internal server error' });
+      console.error('Update rates error:', error)
+      return reply.status(500).send({ error: 'Internal server error' })
     }
-  });
+  })
 
   // PUT /bank/allocation
   fastify.put('/bank/allocation', async (request, reply) => {
     try {
-      const body = updateAllocationSchema.parse(request.body);
+      const body = updateAllocationSchema.parse(request.body)
 
       // Validate that allocations sum to 1.0
-      const total = Object.values(body.allocations).reduce((sum, val) => sum + val, 0);
+      const total = Object.values(body.allocations).reduce(
+        (sum, val) => sum + val,
+        0
+      )
       if (Math.abs(total - 1.0) > 0.0001) {
-        return reply.status(400).send({ error: 'Allocations must sum to 1.0' });
+        return reply.status(400).send({ error: 'Allocations must sum to 1.0' })
       }
 
       // TODO: Get bank ID from auth
-      const bank = await prisma.bank.findFirst();
+      const bank = await prisma.bank.findFirst()
       if (!bank) {
-        return reply.status(404).send({ error: 'Bank not found' });
+        return reply.status(404).send({ error: 'Bank not found' })
       }
 
       // Update allocations
@@ -134,22 +126,24 @@ export async function bankRoutes(fastify: FastifyInstance) {
             riskClass,
             percentage,
           },
-        });
+        })
       }
 
       const updatedAllocations = await prisma.bankAllocation.findMany({
         where: { bankId: bank.id },
-      });
+      })
 
-      return reply.send({ success: true, allocations: updatedAllocations });
+      return reply.send({ success: true, allocations: updatedAllocations })
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return reply.status(400).send({ error: 'Invalid input', details: error.errors });
+        return reply
+          .status(400)
+          .send({ error: 'Invalid input', details: error.errors })
       }
-      console.error('Update allocation error:', error);
-      return reply.status(500).send({ error: 'Internal server error' });
+      console.error('Update allocation error:', error)
+      return reply.status(500).send({ error: 'Internal server error' })
     }
-  });
+  })
 
   // POST /bank/collect
   fastify.post('/bank/collect', async (request, reply) => {
@@ -166,23 +160,26 @@ export async function bankRoutes(fastify: FastifyInstance) {
             where: { currentBalance: { gt: 0 } },
           },
         },
-      });
+      })
 
       if (!bank) {
-        return reply.status(404).send({ error: 'Bank not found' });
+        return reply.status(404).send({ error: 'Bank not found' })
       }
 
       // Rate limit check
-      const now = new Date();
-      const lastCollected = new Date(bank.lastCollectedAt);
-      const secondsSinceLastCollect = (now.getTime() - lastCollected.getTime()) / 1000;
+      const now = new Date()
+      const lastCollected = new Date(bank.lastCollectedAt)
+      const secondsSinceLastCollect =
+        (now.getTime() - lastCollected.getTime()) / 1000
 
       if (secondsSinceLastCollect < COLLECT_COOLDOWN_SECONDS) {
-        const retryAfter = Math.ceil(COLLECT_COOLDOWN_SECONDS - secondsSinceLastCollect);
+        const retryAfter = Math.ceil(
+          COLLECT_COOLDOWN_SECONDS - secondsSinceLastCollect
+        )
         return reply.status(429).send({
           error: 'Too soon',
           retryAfter,
-        });
+        })
       }
 
       // Build bank state
@@ -193,12 +190,17 @@ export async function bankRoutes(fastify: FastifyInstance) {
         currentEquity: Number(bank.currentEquity),
         currentLoans: Number(bank.currentLoans),
         currentDeposits: Number(bank.currentDeposits),
-        rates: Object.fromEntries(bank.rates.map(r => [r.product, Number(r.rate)])),
-        allocations: Object.fromEntries(bank.allocations.map(a => [a.riskClass, Number(a.percentage)])),
+        rates: Object.fromEntries(
+          bank.rates.map(r => [r.product, Number(r.rate)])
+        ),
+        allocations: Object.fromEntries(
+          bank.allocations.map(a => [a.riskClass, Number(a.percentage)])
+        ),
         loanBuckets: bank.loanBuckets.map(b => ({
           id: b.id,
-          product: b.product as any,
-          riskClass: b.riskClass as any,
+          product: b.product as BankState['loanBuckets'][number]['product'],
+          riskClass:
+            b.riskClass as BankState['loanBuckets'][number]['riskClass'],
           originationHour: b.originationHour,
           originalPrincipal: Number(b.originalPrincipal),
           currentBalance: Number(b.currentBalance),
@@ -208,20 +210,20 @@ export async function bankRoutes(fastify: FastifyInstance) {
         })),
         depositBuckets: bank.depositBuckets.map(b => ({
           id: b.id,
-          product: b.product as any,
+          product: b.product as BankState['depositBuckets'][number]['product'],
           originationHour: b.originationHour,
           originalAmount: Number(b.originalAmount),
           currentBalance: Number(b.currentBalance),
           interestRate: Number(b.interestRate),
           maturityDate: b.maturityDate || undefined,
         })),
-      };
+      }
 
       // Run simulation
-      const report = simulateCollection(bankState, now);
+      const report = simulateCollection(bankState, now)
 
       // Save results in transaction
-      await prisma.$transaction(async (tx) => {
+      await prisma.$transaction(async tx => {
         // Update bank state
         await tx.bank.update({
           where: { id: bank.id },
@@ -231,7 +233,7 @@ export async function bankRoutes(fastify: FastifyInstance) {
             currentLoans: report.endingLoans,
             currentDeposits: report.endingDeposits,
           },
-        });
+        })
 
         // Create new loan buckets
         for (const bucket of report.newLoanBuckets) {
@@ -247,7 +249,7 @@ export async function bankRoutes(fastify: FastifyInstance) {
               loanCount: bucket.loanCount,
               activeLoanCount: bucket.activeLoanCount,
             },
-          });
+          })
         }
 
         // Update existing loan buckets
@@ -258,7 +260,7 @@ export async function bankRoutes(fastify: FastifyInstance) {
               currentBalance: bucket.currentBalance,
               activeLoanCount: bucket.activeLoanCount,
             },
-          });
+          })
         }
 
         // Create new deposit buckets
@@ -273,7 +275,7 @@ export async function bankRoutes(fastify: FastifyInstance) {
               interestRate: bucket.interestRate,
               maturityDate: bucket.maturityDate,
             },
-          });
+          })
         }
 
         // Record collection
@@ -296,7 +298,7 @@ export async function bankRoutes(fastify: FastifyInstance) {
             endingDeposits: report.endingDeposits,
             randomSeed: report.randomSeed,
           },
-        });
+        })
 
         // Record all transactions
         for (const txn of report.transactions) {
@@ -311,14 +313,14 @@ export async function bankRoutes(fastify: FastifyInstance) {
               depositBucketId: txn.depositBucketId,
               details: txn.details,
             },
-          });
+          })
         }
-      });
+      })
 
-      return reply.send(report);
+      return reply.send(report)
     } catch (error) {
-      console.error('Collection error:', error);
-      return reply.status(500).send({ error: 'Internal server error' });
+      console.error('Collection error:', error)
+      return reply.status(500).send({ error: 'Internal server error' })
     }
-  });
+  })
 }
