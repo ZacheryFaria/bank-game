@@ -1,0 +1,202 @@
+// Bank Game Database Schema
+// See design/architecture.md for full details
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email         String   @unique @db.VarChar(255)
+  passwordHash  String   @map("password_hash") @db.VarChar(255)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  bank Bank?
+
+  @@map("users")
+}
+
+model Bank {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String   @unique @map("user_id") @db.Uuid
+  name            String   @db.VarChar(100)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  lastCollectedAt DateTime @default(now()) @map("last_collected_at") @db.Timestamptz(6)
+
+  // Denormalized current state (derived from ledger, cached for perf)
+  currentEquity   Decimal @default(200000.00) @map("current_equity") @db.Decimal(18, 2)
+  currentLoans    Decimal @default(0) @map("current_loans") @db.Decimal(18, 2)
+  currentDeposits Decimal @default(0) @map("current_deposits") @db.Decimal(18, 2)
+
+  user                User                 @relation(fields: [userId], references: [id])
+  rates               BankRate[]
+  allocations         BankAllocation[]
+  loanBuckets         LoanBucket[]
+  depositBuckets      DepositBucket[]
+  transactions        Transaction[]
+  collections         Collection[]
+  quarterlySnapshots  QuarterlySnapshot[]
+
+  @@index([currentEquity(sort: Desc)], name: "idx_banks_equity")
+  @@index([currentLoans(sort: Desc)], name: "idx_banks_loans")
+  @@map("banks")
+}
+
+model BankRate {
+  bankId    String   @map("bank_id") @db.Uuid
+  product   String   @db.VarChar(20) // mortgage, auto, personal, credit_card, savings, cd
+  rate      Decimal  @db.Decimal(5, 4) // e.g., 0.0650 = 6.50%
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  bank Bank @relation(fields: [bankId], references: [id], onDelete: Cascade)
+
+  @@id([bankId, product])
+  @@map("bank_rates")
+}
+
+model BankAllocation {
+  bankId     String   @map("bank_id") @db.Uuid
+  riskClass  String   @map("risk_class") @db.VarChar(20) // subprime, near_prime, prime, super_prime
+  percentage Decimal  @db.Decimal(5, 4) // e.g., 0.2500 = 25%
+  updatedAt  DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  bank Bank @relation(fields: [bankId], references: [id], onDelete: Cascade)
+
+  @@id([bankId, riskClass])
+  @@map("bank_allocation")
+}
+
+model LoanBucket {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  bankId            String   @map("bank_id") @db.Uuid
+  product           String   @db.VarChar(20)
+  riskClass         String   @map("risk_class") @db.VarChar(20)
+  originationHour   DateTime @map("origination_hour") @db.Timestamptz(6)
+  originalPrincipal Decimal  @map("original_principal") @db.Decimal(18, 2)
+  currentBalance    Decimal  @map("current_balance") @db.Decimal(18, 2)
+  interestRate      Decimal  @map("interest_rate") @db.Decimal(5, 4)
+  loanCount         Int      @map("loan_count")
+  activeLoanCount   Int      @map("active_loan_count")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  bank         Bank          @relation(fields: [bankId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@unique([bankId, product, riskClass, originationHour])
+  @@index([bankId], name: "idx_loan_buckets_bank")
+  @@index([bankId, currentBalance], name: "idx_loan_buckets_balance")
+  @@map("loan_buckets")
+}
+
+model DepositBucket {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  bankId          String    @map("bank_id") @db.Uuid
+  product         String    @db.VarChar(20) // savings, cd
+  originationHour DateTime  @map("origination_hour") @db.Timestamptz(6)
+  originalAmount  Decimal   @map("original_amount") @db.Decimal(18, 2)
+  currentBalance  Decimal   @map("current_balance") @db.Decimal(18, 2)
+  interestRate    Decimal   @map("interest_rate") @db.Decimal(5, 4)
+  maturityDate    DateTime? @map("maturity_date") @db.Timestamptz(6)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  bank         Bank          @relation(fields: [bankId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@unique([bankId, product, originationHour])
+  @@index([bankId], name: "idx_deposit_buckets_bank")
+  @@map("deposit_buckets")
+}
+
+model Transaction {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  bankId          String    @map("bank_id") @db.Uuid
+  timestamp       DateTime  @db.Timestamptz(6) // Game time
+  collectedAt     DateTime  @map("collected_at") @db.Timestamptz(6) // Real time of collection
+  type            String    @db.VarChar(30)
+  amount          Decimal   @db.Decimal(18, 2) // Positive = inflow, Negative = outflow
+  loanBucketId    String?   @map("loan_bucket_id") @db.Uuid
+  depositBucketId String?   @map("deposit_bucket_id") @db.Uuid
+  details         Json?     @db.JsonB
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  bank          Bank           @relation(fields: [bankId], references: [id], onDelete: Cascade)
+  loanBucket    LoanBucket?    @relation(fields: [loanBucketId], references: [id])
+  depositBucket DepositBucket? @relation(fields: [depositBucketId], references: [id])
+
+  @@index([bankId, timestamp], name: "idx_transactions_bank")
+  @@index([bankId, type], name: "idx_transactions_type")
+  @@map("transactions")
+}
+
+model Collection {
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  bankId               String   @map("bank_id") @db.Uuid
+  collectedAt          DateTime @default(now()) @map("collected_at") @db.Timestamptz(6)
+  gameTimeStart        DateTime @map("game_time_start") @db.Timestamptz(6)
+  gameTimeEnd          DateTime @map("game_time_end") @db.Timestamptz(6)
+  realHoursElapsed     Decimal  @map("real_hours_elapsed") @db.Decimal(10, 4)
+  gameQuartersElapsed  Decimal  @map("game_quarters_elapsed") @db.Decimal(10, 4)
+  loansOriginated      Decimal  @map("loans_originated") @db.Decimal(18, 2)
+  interestIncome       Decimal  @map("interest_income") @db.Decimal(18, 2)
+  interestExpense      Decimal  @map("interest_expense") @db.Decimal(18, 2)
+  defaultLosses        Decimal  @map("default_losses") @db.Decimal(18, 2)
+  operatingExpenses    Decimal  @map("operating_expenses") @db.Decimal(18, 2)
+  netIncome            Decimal  @map("net_income") @db.Decimal(18, 2)
+  endingEquity         Decimal  @map("ending_equity") @db.Decimal(18, 2)
+  endingLoans          Decimal  @map("ending_loans") @db.Decimal(18, 2)
+  endingDeposits       Decimal  @map("ending_deposits") @db.Decimal(18, 2)
+  randomSeed           BigInt   @map("random_seed")
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  bank Bank @relation(fields: [bankId], references: [id], onDelete: Cascade)
+
+  @@index([bankId, collectedAt(sort: Desc)], name: "idx_collections_bank")
+  @@map("collections")
+}
+
+model QuarterlySnapshot {
+  id                    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  bankId                String   @map("bank_id") @db.Uuid
+  quarterEnd            DateTime @map("quarter_end") @db.Date
+  fiscalYear            Int      @map("fiscal_year")
+  fiscalQuarter         Int      @map("fiscal_quarter")
+
+  // Balance sheet
+  totalAssets           Decimal  @map("total_assets") @db.Decimal(18, 2)
+  totalLoans            Decimal  @map("total_loans") @db.Decimal(18, 2)
+  loanLossReserve       Decimal  @map("loan_loss_reserve") @db.Decimal(18, 2)
+  cashAndReserves       Decimal  @map("cash_and_reserves") @db.Decimal(18, 2)
+  totalDeposits         Decimal  @map("total_deposits") @db.Decimal(18, 2)
+  totalLiabilities      Decimal  @map("total_liabilities") @db.Decimal(18, 2)
+  totalEquity           Decimal  @map("total_equity") @db.Decimal(18, 2)
+
+  // Income statement (for the quarter)
+  interestIncome        Decimal  @map("interest_income") @db.Decimal(18, 2)
+  interestExpense       Decimal  @map("interest_expense") @db.Decimal(18, 2)
+  netInterestIncome     Decimal  @map("net_interest_income") @db.Decimal(18, 2)
+  provisionForLosses    Decimal  @map("provision_for_losses") @db.Decimal(18, 2)
+  operatingExpenses     Decimal  @map("operating_expenses") @db.Decimal(18, 2)
+  netIncome             Decimal  @map("net_income") @db.Decimal(18, 2)
+
+  // Key ratios
+  capitalRatio          Decimal  @map("capital_ratio") @db.Decimal(5, 4)
+  netInterestMargin     Decimal  @map("net_interest_margin") @db.Decimal(5, 4)
+  returnOnEquity        Decimal  @map("return_on_equity") @db.Decimal(5, 4)
+  defaultRate           Decimal  @map("default_rate") @db.Decimal(5, 4)
+
+  // Portfolio breakdown
+  portfolioByProduct    Json     @map("portfolio_by_product") @db.JsonB
+  portfolioByRiskClass  Json     @map("portfolio_by_risk_class") @db.JsonB
+
+  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  bank Bank @relation(fields: [bankId], references: [id], onDelete: Cascade)
+
+  @@unique([bankId, quarterEnd])
+  @@map("quarterly_snapshots")
+}
