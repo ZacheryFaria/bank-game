@@ -1,23 +1,8 @@
-import Fastify, { FastifyInstance } from "fastify";
-import cors from "@fastify/cors";
-import { registerApiRoutes } from "../../routes/api.js";
+import { FastifyInstance } from "fastify";
+import { createServer } from "../../server.js";
 
 export async function createTestServer(): Promise<FastifyInstance> {
-  const fastify = Fastify({
-    logger: false,
-  });
-
-  await fastify.register(cors, {
-    origin: true,
-  });
-
-  fastify.get("/health", () => {
-    return { status: "ok", timestamp: new Date().toISOString() };
-  });
-
-  await fastify.register(registerApiRoutes);
-
-  return fastify;
+  return await createServer();
 }
 
 export async function closeTestServer(server: FastifyInstance) {
