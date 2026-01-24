@@ -86,6 +86,169 @@ export async function updateBankAllocation(
   return { success: true as const, allocations: updatedAllocations };
 }
 
+async function buildLoanBucketIdMap(
+  tx: any,
+  bankId: string,
+  newBuckets: Array<{
+    id: string;
+    product: string;
+    riskClass: string;
+    originationHour: number;
+  }>,
+): Promise<Map<string, string>> {
+  const idMap = new Map<string, string>();
+  for (const bucket of newBuckets) {
+    const createdBucket = await tx.loanBucket.findFirst({
+      where: {
+        bankId,
+        product: bucket.product,
+        riskClass: bucket.riskClass,
+        originationHour: bucket.originationHour,
+      },
+    });
+    if (createdBucket) {
+      idMap.set(bucket.id, createdBucket.id);
+    }
+  }
+  return idMap;
+}
+
+async function buildDepositBucketIdMap(
+  tx: any,
+  bankId: string,
+  newBuckets: Array<{
+    id: string;
+    product: string;
+    originationHour: number;
+  }>,
+): Promise<Map<string, string>> {
+  const idMap = new Map<string, string>();
+  for (const bucket of newBuckets) {
+    const createdBucket = await tx.depositBucket.findFirst({
+      where: {
+        bankId,
+        product: bucket.product,
+        originationHour: bucket.originationHour,
+      },
+    });
+    if (createdBucket) {
+      idMap.set(bucket.id, createdBucket.id);
+    }
+  }
+  return idMap;
+}
+
+async function createNewLoanBuckets(tx: any, bankId: string, buckets: any[]) {
+  for (const bucket of buckets) {
+    await tx.loanBucket.create({
+      data: {
+        bankId,
+        product: bucket.product,
+        riskClass: bucket.riskClass,
+        originationHour: bucket.originationHour,
+        originalPrincipal: bucket.originalPrincipal,
+        currentBalance: bucket.currentBalance,
+        interestRate: bucket.interestRate,
+        loanCount: bucket.loanCount,
+        activeLoanCount: bucket.activeLoanCount,
+      },
+    });
+  }
+}
+
+async function updateExistingLoanBuckets(tx: any, buckets: any[]) {
+  for (const bucket of buckets) {
+    await tx.loanBucket.update({
+      where: { id: bucket.id },
+      data: {
+        currentBalance: bucket.currentBalance,
+        activeLoanCount: bucket.activeLoanCount,
+      },
+    });
+  }
+}
+
+async function createNewDepositBuckets(tx: any, bankId: string, buckets: any[]) {
+  for (const bucket of buckets) {
+    await tx.depositBucket.create({
+      data: {
+        bankId,
+        product: bucket.product,
+        originationHour: bucket.originationHour,
+        originalAmount: bucket.originalAmount,
+        currentBalance: bucket.currentBalance,
+        interestRate: bucket.interestRate,
+        maturityDate: bucket.maturityDate,
+      },
+    });
+  }
+}
+
+async function updateExistingDepositBuckets(tx: any, buckets: any[]) {
+  for (const bucket of buckets) {
+    await tx.depositBucket.update({
+      where: { id: bucket.id },
+      data: {
+        currentBalance: bucket.currentBalance,
+      },
+    });
+  }
+}
+
+async function createCollectionRecord(tx: any, bankId: string, now: Date, report: any) {
+  await tx.collection.create({
+    data: {
+      bankId,
+      collectedAt: now,
+      gameTimeStart: report.gameTimeStart,
+      gameTimeEnd: report.gameTimeEnd,
+      realHoursElapsed: report.realHoursElapsed,
+      gameQuartersElapsed: report.gameQuartersElapsed,
+      loansOriginated: report.loansOriginated,
+      interestIncome: report.interestIncome,
+      interestExpense: report.interestExpense,
+      defaultLosses: report.defaultLosses,
+      operatingExpenses: report.operatingExpenses,
+      netIncome: report.netIncome,
+      endingEquity: report.endingEquity,
+      endingLoans: report.endingLoans,
+      endingDeposits: report.endingDeposits,
+      randomSeed: report.randomSeed,
+    },
+  });
+}
+
+async function createTransactions(
+  tx: any,
+  bankId: string,
+  now: Date,
+  transactions: any[],
+  loanBucketIdMap: Map<string, string>,
+  depositBucketIdMap: Map<string, string>,
+) {
+  for (const txn of transactions) {
+    const loanBucketId = txn.loanBucketId
+      ? loanBucketIdMap.get(txn.loanBucketId) ?? txn.loanBucketId
+      : null;
+    const depositBucketId = txn.depositBucketId
+      ? depositBucketIdMap.get(txn.depositBucketId) ?? txn.depositBucketId
+      : null;
+
+    await tx.transaction.create({
+      data: {
+        bankId,
+        timestamp: txn.timestamp,
+        collectedAt: now,
+        type: txn.type,
+        amount: txn.amount,
+        loanBucketId,
+        depositBucketId,
+        details: txn.details,
+      },
+    });
+  }
+}
+
 export async function collectBank(bankId: string) {
   const bank = await prisma.bank.findUnique({
     where: { id: bankId },
@@ -167,90 +330,31 @@ export async function collectBank(bankId: string) {
       },
     });
 
-    for (const bucket of report.newLoanBuckets) {
-      await tx.loanBucket.create({
-        data: {
-          bankId: bank.id,
-          product: bucket.product,
-          riskClass: bucket.riskClass,
-          originationHour: bucket.originationHour,
-          originalPrincipal: bucket.originalPrincipal,
-          currentBalance: bucket.currentBalance,
-          interestRate: bucket.interestRate,
-          loanCount: bucket.loanCount,
-          activeLoanCount: bucket.activeLoanCount,
-        },
-      });
-    }
+    await createNewLoanBuckets(tx, bank.id, report.newLoanBuckets);
+    await updateExistingLoanBuckets(tx, report.updatedLoanBuckets);
+    await createNewDepositBuckets(tx, bank.id, report.newDepositBuckets);
+    await updateExistingDepositBuckets(tx, report.updatedDepositBuckets);
+    await createCollectionRecord(tx, bank.id, now, report);
 
-    for (const bucket of report.updatedLoanBuckets) {
-      await tx.loanBucket.update({
-        where: { id: bucket.id },
-        data: {
-          currentBalance: bucket.currentBalance,
-          activeLoanCount: bucket.activeLoanCount,
-        },
-      });
-    }
+    const loanBucketIdMap = await buildLoanBucketIdMap(
+      tx,
+      bank.id,
+      report.newLoanBuckets,
+    );
+    const depositBucketIdMap = await buildDepositBucketIdMap(
+      tx,
+      bank.id,
+      report.newDepositBuckets,
+    );
 
-    for (const bucket of report.newDepositBuckets) {
-      await tx.depositBucket.create({
-        data: {
-          bankId: bank.id,
-          product: bucket.product,
-          originationHour: bucket.originationHour,
-          originalAmount: bucket.originalAmount,
-          currentBalance: bucket.currentBalance,
-          interestRate: bucket.interestRate,
-          maturityDate: bucket.maturityDate,
-        },
-      });
-    }
-
-    for (const bucket of report.updatedDepositBuckets) {
-      await tx.depositBucket.update({
-        where: { id: bucket.id },
-        data: {
-          currentBalance: bucket.currentBalance,
-        },
-      });
-    }
-
-    await tx.collection.create({
-      data: {
-        bankId: bank.id,
-        collectedAt: now,
-        gameTimeStart: report.gameTimeStart,
-        gameTimeEnd: report.gameTimeEnd,
-        realHoursElapsed: report.realHoursElapsed,
-        gameQuartersElapsed: report.gameQuartersElapsed,
-        loansOriginated: report.loansOriginated,
-        interestIncome: report.interestIncome,
-        interestExpense: report.interestExpense,
-        defaultLosses: report.defaultLosses,
-        operatingExpenses: report.operatingExpenses,
-        netIncome: report.netIncome,
-        endingEquity: report.endingEquity,
-        endingLoans: report.endingLoans,
-        endingDeposits: report.endingDeposits,
-        randomSeed: report.randomSeed,
-      },
-    });
-
-    for (const txn of report.transactions) {
-      await tx.transaction.create({
-        data: {
-          bankId: bank.id,
-          timestamp: txn.timestamp,
-          collectedAt: now,
-          type: txn.type,
-          amount: txn.amount,
-          loanBucketId: txn.loanBucketId,
-          depositBucketId: txn.depositBucketId,
-          details: txn.details,
-        },
-      });
-    }
+    await createTransactions(
+      tx,
+      bank.id,
+      now,
+      report.transactions,
+      loanBucketIdMap,
+      depositBucketIdMap,
+    );
   });
 
   return { success: true as const, report };

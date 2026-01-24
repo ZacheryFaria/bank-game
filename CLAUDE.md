@@ -249,31 +249,41 @@ See `todos/BUGS_AND_IMPROVEMENTS.md` for comprehensive list. Key issues:
 
 ## Recommended Next Steps
 
-**TUI (High Priority):**
-1. **Token Persistence** - Save JWT to ~/.bank-game/token file
-2. **Rate Editor Screen** - Interactive rate adjustment with h/l keys
-3. **Allocation Editor Screen** - Portfolio allocation adjustment
-4. **Transaction History** - Scrollable transaction viewer with j/k navigation
-5. **Leaderboard Screen** - View top banks, navigate with j/k
+**Current Focus: TUI UX Improvements** (see `todos/USER_FEEDBACK.md`)
+
+**TUI - Immediate Priority (UX Fixes):**
+1. **Fix Vim Keybinding Modality** - Disable keybindings during text input, require Esc to exit
+2. **Add Visual Borders** - Screen container, section borders, input focus, command bar
+3. **Input Field UX** - Validation feedback, placeholders, help text
+4. **Command Mode Improvements** - Command history, tab completion, better visibility
+
+**TUI - High Priority (Features):**
+5. **Token Persistence** - Save JWT to ~/.bank-game/token file
+6. **Rate Editor Screen** - Interactive rate adjustment with h/l keys
+7. **Allocation Editor Screen** - Portfolio allocation adjustment
+8. **Transaction History** - Scrollable transaction viewer with j/k navigation
+9. **Leaderboard Screen** - View top banks, navigate with j/k
 
 **Backend (High Priority):**
-6. **Migrate banks.ts and market.ts to ts-rest** - Complete ts-rest migration
-7. **Deposit Bucket Interest** - Update existing deposit buckets with accrued interest during collection
-8. **Quarterly Snapshots** - Implement snapshot generation from transaction ledger
-9. **Tests** - Add test coverage (see `todos/TESTING_PLAN.md`)
+10. **Apply Decimal Helper to Bank Logic** - Use `convertBankDecimals()` in all bank endpoints
+11. **Migrate banks.ts and market.ts to ts-rest** - Complete ts-rest migration
+12. **Deposit Bucket Interest** - Update existing deposit buckets with accrued interest during collection
+13. **Quarterly Snapshots** - Implement snapshot generation from transaction ledger
+14. **Tests** - Add test coverage (see `todos/TESTING_PLAN.md`)
 
 **Web Frontend (Medium Priority):**
-10. **ts-rest Integration** - Add ts-rest client like TUI
-11. **Auth Flow** - Login/register screens following TUI pattern
-12. **Dashboard** - Implement main game screen from design/wireframes.md
-13. **API Integration** - Set up TanStack Query, connect to backend
+15. **ts-rest Integration** - Add ts-rest client like TUI
+16. **Auth Flow** - Login/register screens following TUI pattern
+17. **Dashboard** - Implement main game screen from design/wireframes.md
+18. **API Integration** - Set up TanStack Query, connect to backend
 
 **Lower Priority:**
-14. **OAuth Providers** - Add Google OAuth support
-15. **Magic Link Auth** - Implement passwordless email login
-16. **Deployment** - Docker setup for backend, Cloudflare Pages for frontend
+19. **OAuth Providers** - Add Google OAuth support
+20. **Magic Link Auth** - Implement passwordless email login
+21. **Deployment** - Docker setup for backend, Cloudflare Pages for frontend
 
 **Architecture Documents (for implementation guidance):**
+- **`todos/USER_FEEDBACK.md`** - Current UX issues and implementation details
 - Read `design/TUI_ARCHITECTURE.md` for complete architecture overview
 - Follow `todos/TUI_FEATURES.md` for planned TUI features
 - Follow `design/wireframes.md` for all UI screens (web frontend)
