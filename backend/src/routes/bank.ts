@@ -9,6 +9,7 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 import prisma from '../lib/db.js'
+import { authenticate } from '../lib/authMiddleware.js'
 import { simulateCollection } from '../engine/CollectionSimulator.js'
 import { COLLECT_COOLDOWN_SECONDS } from '../engine/constants.js'
 import type { BankState } from '../engine/types.js'
@@ -22,11 +23,12 @@ const updateAllocationSchema = z.object({
 })
 
 export function bankRoutes(fastify: FastifyInstance) {
+  fastify.addHook('preHandler', authenticate)
+
   // GET /bank
   fastify.get('/bank', async (request, reply) => {
-    // TODO: Add auth middleware
-    // For now, just get the first bank for testing
-    const bank = await prisma.bank.findFirst({
+    const bank = await prisma.bank.findUnique({
+      where: { id: request.bank!.id },
       include: {
         rates: true,
         allocations: true,
@@ -39,10 +41,6 @@ export function bankRoutes(fastify: FastifyInstance) {
       },
     })
 
-    if (!bank) {
-      return reply.status(404).send({ error: 'Bank not found' })
-    }
-
     return reply.send(bank)
   })
 
@@ -50,25 +48,19 @@ export function bankRoutes(fastify: FastifyInstance) {
   fastify.put('/bank/rates', async (request, reply) => {
     try {
       const body = updateRatesSchema.parse(request.body)
+      const bankId = request.bank!.id
 
-      // TODO: Get bank ID from auth
-      const bank = await prisma.bank.findFirst()
-      if (!bank) {
-        return reply.status(404).send({ error: 'Bank not found' })
-      }
-
-      // Update rates
       for (const [product, rate] of Object.entries(body.rates)) {
         await prisma.bankRate.upsert({
           where: {
             bankId_product: {
-              bankId: bank.id,
+              bankId,
               product,
             },
           },
           update: { rate },
           create: {
-            bankId: bank.id,
+            bankId,
             product,
             rate,
           },
@@ -76,7 +68,7 @@ export function bankRoutes(fastify: FastifyInstance) {
       }
 
       const updatedRates = await prisma.bankRate.findMany({
-        where: { bankId: bank.id },
+        where: { bankId },
       })
 
       return reply.send({ success: true, rates: updatedRates })
@@ -96,7 +88,6 @@ export function bankRoutes(fastify: FastifyInstance) {
     try {
       const body = updateAllocationSchema.parse(request.body)
 
-      // Validate that allocations sum to 1.0
       const total = Object.values(body.allocations).reduce(
         (sum, val) => sum + val,
         0
@@ -105,24 +96,19 @@ export function bankRoutes(fastify: FastifyInstance) {
         return reply.status(400).send({ error: 'Allocations must sum to 1.0' })
       }
 
-      // TODO: Get bank ID from auth
-      const bank = await prisma.bank.findFirst()
-      if (!bank) {
-        return reply.status(404).send({ error: 'Bank not found' })
-      }
+      const bankId = request.bank!.id
 
-      // Update allocations
       for (const [riskClass, percentage] of Object.entries(body.allocations)) {
         await prisma.bankAllocation.upsert({
           where: {
             bankId_riskClass: {
-              bankId: bank.id,
+              bankId,
               riskClass,
             },
           },
           update: { percentage },
           create: {
-            bankId: bank.id,
+            bankId,
             riskClass,
             percentage,
           },
@@ -130,7 +116,7 @@ export function bankRoutes(fastify: FastifyInstance) {
       }
 
       const updatedAllocations = await prisma.bankAllocation.findMany({
-        where: { bankId: bank.id },
+        where: { bankId },
       })
 
       return reply.send({ success: true, allocations: updatedAllocations })
@@ -148,8 +134,8 @@ export function bankRoutes(fastify: FastifyInstance) {
   // POST /bank/collect
   fastify.post('/bank/collect', async (request, reply) => {
     try {
-      // TODO: Get bank ID from auth
-      const bank = await prisma.bank.findFirst({
+      const bank = await prisma.bank.findUnique({
+        where: { id: request.bank!.id },
         include: {
           rates: true,
           allocations: true,
@@ -274,6 +260,16 @@ export function bankRoutes(fastify: FastifyInstance) {
               currentBalance: bucket.currentBalance,
               interestRate: bucket.interestRate,
               maturityDate: bucket.maturityDate,
+            },
+          })
+        }
+
+        // Update existing deposit buckets
+        for (const bucket of report.updatedDepositBuckets) {
+          await tx.depositBucket.update({
+            where: { id: bucket.id },
+            data: {
+              currentBalance: bucket.currentBalance,
             },
           })
         }

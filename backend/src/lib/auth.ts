@@ -32,16 +32,16 @@ export async function verifyPassword(
 }
 
 /**
- * Generate a JWT token
+ * Generate a JWT access token (7-day expiry)
  */
 export function generateToken(payload: JWTPayload): string {
   return jwt.sign(payload, JWT_SECRET, {
-    expiresIn: '7d', // 7 days
+    expiresIn: '7d',
   })
 }
 
 /**
- * Verify and decode a JWT token
+ * Verify and decode a JWT access token
  */
 export function verifyToken(token: string): JWTPayload | null {
   try {
@@ -49,4 +49,41 @@ export function verifyToken(token: string): JWTPayload | null {
   } catch (_error) {
     return null
   }
+}
+
+/**
+ * Generate a refresh token (30-day expiry)
+ */
+export function generateRefreshToken(payload: JWTPayload): string {
+  return jwt.sign(payload, JWT_SECRET, {
+    expiresIn: '30d',
+  })
+}
+
+/**
+ * Verify and decode a refresh token
+ */
+export function verifyRefreshToken(token: string): JWTPayload | null {
+  try {
+    return jwt.verify(token, JWT_SECRET) as JWTPayload
+  } catch (_error) {
+    return null
+  }
+}
+
+/**
+ * Hash a refresh token for storage
+ */
+export async function hashRefreshToken(token: string): Promise<string> {
+  return bcrypt.hash(token, SALT_ROUNDS)
+}
+
+/**
+ * Verify a refresh token against a hash
+ */
+export async function verifyRefreshTokenHash(
+  token: string,
+  hash: string
+): Promise<boolean> {
+  return bcrypt.compare(token, hash)
 }

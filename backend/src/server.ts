@@ -9,9 +9,13 @@ const fastify = Fastify({
   logger: true,
 })
 
-// Register CORS plugin
+const allowedOrigins = process.env.ALLOWED_ORIGINS || '*'
+
 await fastify.register(cors, {
-  origin: true, // Allow all origins in development
+  origin:
+    allowedOrigins === '*'
+      ? true
+      : allowedOrigins.split(',').map(o => o.trim()),
 })
 
 // Health check endpoint
