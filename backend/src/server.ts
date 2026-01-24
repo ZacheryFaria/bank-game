@@ -4,8 +4,6 @@ import 'dotenv/config'
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import { registerApiRoutes } from './routes/api.js'
-import { banksRoutes } from './routes/banks.js'
-import { marketRoutes } from './routes/market.js'
 
 const fastify = Fastify({
   logger: true,
@@ -27,8 +25,6 @@ fastify.get('/health', () => {
 
 // Register API routes
 await fastify.register(registerApiRoutes)
-await fastify.register(banksRoutes, { prefix: '/api' })
-await fastify.register(marketRoutes, { prefix: '/api' })
 
 // Start server
 const start = async () => {
