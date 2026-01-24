@@ -8,6 +8,7 @@ import {
   verifyRefreshToken,
   verifyRefreshTokenHash,
 } from "../lib/auth.js";
+import { convertBankDecimals } from "../lib/prismaHelpers.js";
 import { STARTING_EQUITY, MARKET_RATES } from "../engine/constants.js";
 
 export async function createUser(data: {
@@ -84,7 +85,7 @@ export async function createUser(data: {
     user: {
       id: user.id,
       email: user.email,
-      bank: user.bank,
+      bank: convertBankDecimals(user.bank),
     },
   };
 }
@@ -132,7 +133,7 @@ export async function authenticateUser(data: {
     user: {
       id: user.id,
       email: user.email,
-      bank: user.bank,
+      bank: convertBankDecimals(user.bank),
     },
   };
 }

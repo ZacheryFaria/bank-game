@@ -69,15 +69,17 @@ export const router = s.router(contract, {
   },
 });
 
-export function registerApiRoutes(fastify: FastifyInstance) {
-  return s.plugin(router)(fastify, {
+export async function registerApiRoutes(fastify: FastifyInstance) {
+  await fastify.register(s.plugin(router), {
     logInitialization: false,
     responseValidation: true,
     requestValidation: true,
-    router: {
-      bank: {
-        middleware: [authenticate],
-      },
-    },
+  });
+
+  // Add middleware to bank routes
+  fastify.addHook("preHandler", async (request, reply) => {
+    if (request.url.startsWith("/api/bank")) {
+      await authenticate(request, reply);
+    }
   });
 }
