@@ -130,12 +130,22 @@
 - [ ] Standardize error response format across all endpoints
 - [ ] Extract constants to environment variables
 - [ ] Add input sanitization for bank names
+- [ ] Wrap rate upserts in transaction for atomicity (logic/bank.ts updateBankRates)
+- [ ] Wrap allocation upserts in transaction for atomicity (logic/bank.ts updateBankAllocation)
+- [ ] Ensure refresh token hash update is atomic with user creation (logic/auth.ts)
+- [ ] Fix markdown linting in TESTING_PLAN.md (use headings instead of bold labels)
 
 ### TUI
 - [ ] Extract magic numbers to constants
 - [ ] Create reusable UI components (Box with border, StatusBar, etc.)
 - [ ] Standardize error handling across components
-- [ ] Add TypeScript strict mode
+- [x] TypeScript strict mode enabled (tui/tsconfig.json)
+- [ ] Fix duplicate polling in Dashboard (remove setInterval, use only refetchInterval)
+- [ ] DRY: Extract shared header configuration in api.ts
+- [ ] Handle "menu" context in useKeyBindings or remove from KeyBindingContext type
+- [ ] Type `key` parameter properly in useKeyBindings (use Ink's Key type instead of any)
+- [ ] Extract shared auth form components (LoginScreen/RegisterScreen share structure)
+- [ ] Fix password validation in RegisterScreen (validate trimmed length consistently)
 
 ### Build System
 - [ ] Optimize build times (parallel builds)

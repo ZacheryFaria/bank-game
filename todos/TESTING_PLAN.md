@@ -24,6 +24,14 @@
 - [ ] collectBank: rate limit (< 60s) returns 429 with retryAfter
 - [ ] collectBank: creates transactions, loan buckets, deposit buckets
 - [ ] collectBank: updates bank equity/loans/deposits
+- [ ] collectBank: bucket ID mapping - new loan buckets are correctly mapped in transactions
+- [ ] collectBank: bucket ID mapping - new deposit buckets are correctly mapped in transactions
+- [ ] collectBank: bucket ID mapping - existing bucket IDs are preserved in transactions
+- [ ] collectBank: bucket ID mapping - transactions reference valid bucket IDs (no FK violations)
+- [ ] collectBank: bucket ID mapping - mixed new/existing buckets handled correctly
+- [ ] collectBank: transaction atomicity - all operations succeed or all rollback
+- [ ] collectBank: buildLoanBucketIdMap correctly maps simulator IDs to DB UUIDs
+- [ ] collectBank: buildDepositBucketIdMap correctly maps simulator IDs to DB UUIDs
 
 ### Integration Tests (routes/api.ts)
 
