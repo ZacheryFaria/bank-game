@@ -80,22 +80,11 @@ pipeline {
         stage('Backend Build') {
             steps {
                 script {
-                    sh """
-                        docker run --rm -v \$(pwd)/artifacts:/artifacts ${DOCKER_IMAGE} sh -c '
-                            cd backend &&
-                            pnpm build &&
-                            mkdir -p /artifacts/backend &&
-                            cp -r dist /artifacts/backend/
-                        '
-                    """
+                    sh "docker run --rm ${DOCKER_IMAGE} sh -c 'cd backend && pnpm build'"
                 }
             }
 
             post {
-                always {
-                    archiveArtifacts artifacts: 'artifacts/backend/**/*', allowEmptyArchive: true, fingerprint: true
-                    sh "docker run --rm -v \$(pwd)/artifacts:/artifacts ${DOCKER_IMAGE} rm -rf /artifacts/backend"
-                }
                 success {
                     publishChecks name: 'Backend Build',
                         summary: 'Backend built successfully',
@@ -114,22 +103,11 @@ pipeline {
         stage('TUI Build') {
             steps {
                 script {
-                    sh """
-                        docker run --rm -v \$(pwd)/artifacts:/artifacts ${DOCKER_IMAGE} sh -c '
-                            cd tui &&
-                            pnpm build &&
-                            mkdir -p /artifacts/tui &&
-                            cp -r dist /artifacts/tui/
-                        '
-                    """
+                    sh "docker run --rm ${DOCKER_IMAGE} sh -c 'cd tui && pnpm build'"
                 }
             }
 
             post {
-                always {
-                    archiveArtifacts artifacts: 'artifacts/tui/**/*', allowEmptyArchive: true, fingerprint: true
-                    sh "docker run --rm -v \$(pwd)/artifacts:/artifacts ${DOCKER_IMAGE} rm -rf /artifacts/tui"
-                }
                 success {
                     publishChecks name: 'TUI Build',
                         summary: 'TUI built successfully',
@@ -190,11 +168,22 @@ pipeline {
             }
             steps {
                 script {
-                    sh "docker run --rm ${DOCKER_IMAGE} sh -c 'cd tui && pnpm test'"
+                    sh """
+                        docker run --rm -v \$(pwd)/artifacts:/artifacts ${DOCKER_IMAGE} sh -c '
+                            cd tui &&
+                            pnpm test &&
+                            mkdir -p /artifacts/tui &&
+                            cp -r test-results /artifacts/tui/
+                        '
+                    """
                 }
             }
 
             post {
+                always {
+                    junit testResults: 'artifacts/tui/test-results/junit.xml', allowEmptyResults: true
+                    sh "docker run --rm -v \$(pwd)/artifacts:/artifacts ${DOCKER_IMAGE} rm -rf /artifacts/tui"
+                }
                 success {
                     publishChecks name: 'TUI Tests',
                         summary: 'TUI tests passed',
