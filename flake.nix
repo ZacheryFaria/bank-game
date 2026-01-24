@@ -31,7 +31,6 @@
             echo "Bank Game Development Environment"
             echo "Node.js version: $(node --version)"
             echo "pnpm version: $(pnpm --version)"
-            echo "PostgreSQL version: $(postgres --version | head -n1)"
             echo ""
             echo "Run 'pnpm install' in backend/ and frontend/ to get started"
           '';

@@ -201,6 +201,18 @@ export function simulateCollection(
 
   currentEquity += interestResult.netInterestIncome
 
+  for (const [bucketId, interest] of interestResult.depositInterestByBucket.entries()) {
+    const bucket = allDepositBuckets.find(b => b.id === bucketId)
+    if (bucket && interest > 0) {
+      const updatedBucket: DepositBucketData = {
+        ...bucket,
+        currentBalance: bucket.currentBalance + interest,
+      }
+      updatedDepositBuckets.push(updatedBucket)
+      currentDeposits += interest
+    }
+  }
+
   // 5. Roll defaults
   const defaultResult = calculateDefaults(
     allLoanBuckets,

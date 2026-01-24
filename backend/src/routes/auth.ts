@@ -2,12 +2,21 @@
  * Auth Routes
  * POST /auth/register - Register new user
  * POST /auth/login - Login existing user
+ * POST /auth/refresh - Refresh access token
  */
 
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import prisma from '../lib/db.js'
-import { hashPassword, verifyPassword, generateToken } from '../lib/auth.js'
+import {
+  hashPassword,
+  verifyPassword,
+  generateToken,
+  generateRefreshToken,
+  verifyRefreshToken,
+  hashRefreshToken,
+  verifyRefreshTokenHash,
+} from '../lib/auth.js'
 import { STARTING_EQUITY, MARKET_RATES } from '../engine/constants.js'
 
 const registerSchema = z.object({
@@ -19,6 +28,10 @@ const registerSchema = z.object({
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string(),
+})
+
+const refreshSchema = z.object({
+  refreshToken: z.string(),
 })
 
 export function authRoutes(fastify: FastifyInstance) {
@@ -36,10 +49,8 @@ export function authRoutes(fastify: FastifyInstance) {
         return reply.status(400).send({ error: 'Email already registered' })
       }
 
-      // Hash password
       const passwordHash = await hashPassword(body.password)
 
-      // Create user and bank in transaction
       const user = await prisma.user.create({
         data: {
           email: body.email,
@@ -50,7 +61,6 @@ export function authRoutes(fastify: FastifyInstance) {
               currentEquity: STARTING_EQUITY,
               currentLoans: 0,
               currentDeposits: 0,
-              // Initialize with market rates
               rates: {
                 createMany: {
                   data: Object.entries(MARKET_RATES).map(([product, rate]) => ({
@@ -59,7 +69,6 @@ export function authRoutes(fastify: FastifyInstance) {
                   })),
                 },
               },
-              // Initialize with equal allocation
               allocations: {
                 createMany: {
                   data: [
@@ -78,14 +87,25 @@ export function authRoutes(fastify: FastifyInstance) {
         },
       })
 
-      // Generate token
       const token = generateToken({
         userId: user.id,
         email: user.email,
       })
 
+      const refreshToken = generateRefreshToken({
+        userId: user.id,
+        email: user.email,
+      })
+      const refreshTokenHash = await hashRefreshToken(refreshToken)
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { refreshTokenHash },
+      })
+
       return reply.send({
         token,
+        refreshToken,
         user: {
           id: user.id,
           email: user.email,
@@ -120,20 +140,30 @@ export function authRoutes(fastify: FastifyInstance) {
         return reply.status(401).send({ error: 'Invalid credentials' })
       }
 
-      // Verify password
       const valid = await verifyPassword(body.password, user.passwordHash)
       if (!valid) {
         return reply.status(401).send({ error: 'Invalid credentials' })
       }
 
-      // Generate token
       const token = generateToken({
         userId: user.id,
         email: user.email,
       })
 
+      const refreshToken = generateRefreshToken({
+        userId: user.id,
+        email: user.email,
+      })
+      const refreshTokenHash = await hashRefreshToken(refreshToken)
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { refreshTokenHash },
+      })
+
       return reply.send({
         token,
+        refreshToken,
         user: {
           id: user.id,
           email: user.email,
@@ -147,6 +177,64 @@ export function authRoutes(fastify: FastifyInstance) {
           .send({ error: 'Invalid input', details: error.errors })
       }
       console.error('Login error:', error)
+      return reply.status(500).send({ error: 'Internal server error' })
+    }
+  })
+
+  // POST /auth/refresh
+  fastify.post('/auth/refresh', async (request, reply) => {
+    try {
+      const body = refreshSchema.parse(request.body)
+
+      const payload = verifyRefreshToken(body.refreshToken)
+      if (!payload) {
+        return reply.status(401).send({ error: 'Invalid or expired refresh token' })
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { id: payload.userId },
+        include: { bank: true },
+      })
+
+      if (!user?.refreshTokenHash) {
+        return reply.status(401).send({ error: 'Invalid refresh token' })
+      }
+
+      const isValid = await verifyRefreshTokenHash(
+        body.refreshToken,
+        user.refreshTokenHash
+      )
+      if (!isValid) {
+        return reply.status(401).send({ error: 'Invalid refresh token' })
+      }
+
+      const token = generateToken({
+        userId: user.id,
+        email: user.email,
+      })
+
+      const newRefreshToken = generateRefreshToken({
+        userId: user.id,
+        email: user.email,
+      })
+      const newRefreshTokenHash = await hashRefreshToken(newRefreshToken)
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { refreshTokenHash: newRefreshTokenHash },
+      })
+
+      return reply.send({
+        token,
+        refreshToken: newRefreshToken,
+      })
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return reply
+          .status(400)
+          .send({ error: 'Invalid input', details: error.errors })
+      }
+      console.error('Refresh error:', error)
       return reply.status(500).send({ error: 'Internal server error' })
     }
   })
