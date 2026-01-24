@@ -62,7 +62,7 @@ const TransactionSchema = z.object({
   amount: z.number(),
   loanBucketId: z.string().nullable().optional(),
   depositBucketId: z.string().nullable().optional(),
-  details: z.record(z.unknown()).nullable().optional(),
+  details: z.record(z.string(), z.unknown()).nullable().optional(),
 });
 
 const CollectionReportSchema = z.object({
@@ -124,6 +124,9 @@ const MarketRatesSchema = z.object({
   loanProducts: z.array(LoanProductInfoSchema),
   depositProducts: z.array(DepositProductInfoSchema),
 });
+
+// Export schemas for reuse
+export { BankRateSchema, BankAllocationSchema, BankSchema, UserSchema };
 
 export const contract = c.router({
   auth: {
