@@ -1,0 +1,12 @@
+packages:
+  - backend
+  - frontend
+  - tui
+  - packages/*
+
+onlyBuiltDependencies:
+  - '@prisma/client'
+  - '@prisma/engines'
+  - bcrypt
+  - esbuild
+  - prisma

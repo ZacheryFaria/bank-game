@@ -1,7 +1,6 @@
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
-import { authRoutes } from './routes/auth.js'
-import { bankRoutes } from './routes/bank.js'
+import { registerApiRoutes } from './routes/api.js'
 import { banksRoutes } from './routes/banks.js'
 import { marketRoutes } from './routes/market.js'
 
@@ -24,8 +23,7 @@ fastify.get('/health', () => {
 })
 
 // Register API routes
-await fastify.register(authRoutes, { prefix: '/api' })
-await fastify.register(bankRoutes, { prefix: '/api' })
+await fastify.register(registerApiRoutes)
 await fastify.register(banksRoutes, { prefix: '/api' })
 await fastify.register(marketRoutes, { prefix: '/api' })
 
