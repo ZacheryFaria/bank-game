@@ -22,10 +22,6 @@ pnpm dev                 # Runs on :3001
 # TUI (Terminal Interface)
 cd tui
 pnpm dev                 # Connects to :3001
-
-# Web Frontend
-cd frontend
-pnpm dev                 # Runs on :5173, proxies API to :3001
 ```
 
 ---
@@ -92,11 +88,9 @@ pnpm type-check && pnpm lint
 
 **TUI:** Ink (React for CLIs) + TypeScript, ts-rest client, TanStack Query, Zustand, vim-like keybindings
 
-**Web Frontend:** React 19 + Vite + TypeScript, Tailwind + shadcn/ui, TanStack Query + Table, Zustand
-
 **Shared:** ts-rest contract + Zod schemas (full type safety across stack)
 
-**Package Manager:** pnpm (workspace: backend, frontend, tui, packages/shared)
+**Package Manager:** pnpm (workspace: backend, tui, packages/shared)
 
 **Development:** Nix (flake.nix + direnv for reproducible dev environment)
 
@@ -216,11 +210,6 @@ bank-game/
 │   │   ├── components/   # React components
 │   │   ├── hooks/        # Custom hooks (useKeyBindings)
 │   │   └── lib/          # API client, Zustand store
-│
-├── frontend/             # Web interface (React + Vite)
-│   └── src/
-│       ├── components/   # UI components (shadcn/ui)
-│       └── pages/        # Route pages
 │
 ├── packages/
 │   └── shared/           # ts-rest contract + Zod schemas
