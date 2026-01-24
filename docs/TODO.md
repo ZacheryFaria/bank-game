@@ -59,9 +59,6 @@ Based on user testing feedback (2026-01-23):
 - [ ] **Auto-refresh Token** - Refresh token before expiration automatically
 - [ ] **Rate Editor Screen** - Interactive rate adjustment with h/l keys, visual bar chart vs market rates
 - [ ] **Portfolio Allocation Screen** - Adjust risk class allocations with visual sliders
-- [ ] **Transaction History Viewer** - Scrollable list with j/k navigation, filter with `/`, export to CSV
-- [ ] **Leaderboard Screen** - View top banks, navigate with j/k, press Enter to view details
-- [ ] **Bank Details Screen** - View other banks' public data, compare rates side-by-side
 - [ ] **Help Screen** - Press `?` to view all keybindings organized by context
 
 ### Testing
@@ -75,9 +72,25 @@ See `docs/tests/test-strategy.md` for full test plan.
 - [ ] **Integration Tests** - Full auth flow, collection flow, multi-user scenarios
 - [ ] **E2E Tests** - Register → Collect → Update Rates → Collect
 
+### Infrastructure
+
+- [ ] **CI/CD Pipeline** - Run tests on every commit, block merge if tests fail
+
 ---
 
 ## Medium Priority
+
+### TUI Features
+
+- [ ] **Settings Screen** - Configure auto-collect interval, API URL, color theme
+- [ ] **Collection History** - View past collections with equity growth chart (ASCII art)
+- [ ] **Notifications System** - Toast-style notifications for collection success, errors
+- [ ] **Dashboard Customization** - Reorder widgets, hide/show sections, save preferences
+- [ ] **Background Collection** - Auto-collect every N minutes with visual indicator
+
+---
+
+## Low Priority
 
 ### Web Frontend
 
@@ -88,14 +101,6 @@ See `docs/tests/test-strategy.md` for full test plan.
 - [ ] **Routing** - Configure react-router with screens from wireframes
 - [ ] **State Management** - Set up Zustand stores for auth and game state
 
-### TUI Features
-
-- [ ] **Settings Screen** - Configure auto-collect interval, API URL, color theme
-- [ ] **Collection History** - View past collections with equity growth chart (ASCII art)
-- [ ] **Notifications System** - Toast-style notifications for collection success, errors
-- [ ] **Dashboard Customization** - Reorder widgets, hide/show sections, save preferences
-- [ ] **Background Collection** - Auto-collect every N minutes with visual indicator
-
 ### Backend Improvements
 
 - [ ] **Database Indexes** - Add indexes on `bankId`, `userId`, `collectedAt` for performance
@@ -104,9 +109,11 @@ See `docs/tests/test-strategy.md` for full test plan.
 - [ ] **Health Check Endpoint** - Add `/health` with database status
 - [ ] **Structured Logging** - Switch to JSON logs for production
 
----
+### TUI Features (Deferred)
 
-## Low Priority
+- [ ] **Transaction History Viewer** - Scrollable list with j/k navigation, filter with `/`, export to CSV
+- [ ] **Leaderboard Screen** - View top banks, navigate with j/k, press Enter to view details
+- [ ] **Bank Details Screen** - View other banks' public data, compare rates side-by-side
 
 ### Infrastructure
 
@@ -115,14 +122,11 @@ See `docs/tests/test-strategy.md` for full test plan.
 - [ ] **Dockerfile for Backend** - Containerize backend application
 - [ ] **docker-compose Full Stack** - Single command to run entire stack
 - [ ] **Systemd Service** - Create service file for backend deployment
-- [ ] **CI/CD Pipeline** - Run tests on every commit, block merge if tests fail
 
 ### TUI Polish
 
 - [ ] **Color Scheme** - Positive values in green, negative in red, warnings in yellow
 - [ ] **Improved Formatting** - Better currency formatting, human-readable timestamps
-- [ ] **ASCII Art Logo** - Show logo on startup
-- [ ] **Sound Effects** - Terminal bell on collection (optional)
 - [ ] **Progress Indicators** - Show progress bars for collection cooldown
 - [ ] **Animation** - Number counter animations, smooth transitions
 
@@ -153,9 +157,7 @@ See `docs/tests/test-strategy.md` for full test plan.
 
 ### Build System
 
-- [ ] Add watch mode for shared package
 - [ ] Add pre-commit hooks (lint, format, type-check)
-- [ ] Add bundle size monitoring
 - [ ] Optimize parallel builds
 
 ---
@@ -164,9 +166,7 @@ See `docs/tests/test-strategy.md` for full test plan.
 
 ### Advanced TUI Features
 
-- [ ] Multi-bank support (switch between banks with gt/gT)
 - [ ] ASCII charts (equity over time, loan composition pie chart)
-- [ ] Macro recording (like vim macros for repetitive tasks)
 - [ ] Export/import strategies (save rate/allocation configs as YAML)
 
 ### Gameplay Enhancements
@@ -182,7 +182,4 @@ See `docs/game-design.md` "Deferred Features" section for details.
 
 ### Platform Expansion
 
-- [ ] React Native mobile app
 - [ ] Electron desktop wrapper for TUI
-- [ ] Voice interface for accessibility
-- [ ] VR banking office (wild idea!)
