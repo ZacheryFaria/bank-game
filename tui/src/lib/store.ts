@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { setAuthToken } from "./api.js";
+import { saveToken, deleteToken } from "./tokenPersistence.js";
 
 type User = {
   id: string;
@@ -23,9 +24,11 @@ export const useAuthStore = create<AuthState>((set) => ({
   login: (token, refreshToken, user) => {
     setAuthToken(token);
     set({ user, token, refreshToken, isAuthenticated: true });
+    saveToken({ token, refreshToken, user }).catch(() => {});
   },
   logout: () => {
     setAuthToken(null);
     set({ user: null, token: null, refreshToken: null, isAuthenticated: false });
+    deleteToken().catch(() => {});
   },
 }));

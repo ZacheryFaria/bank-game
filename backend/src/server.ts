@@ -1,3 +1,6 @@
+// Load environment variables from .env file
+import 'dotenv/config'
+
 import Fastify, { FastifyInstance } from 'fastify'
 import cors from '@fastify/cors'
 import { registerApiRoutes } from './routes/api.js'
