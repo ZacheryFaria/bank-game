@@ -1,0 +1,52 @@
+# Dependencies
+node_modules
+**/node_modules
+
+# Build outputs
+dist
+**/dist
+*.tsbuildinfo
+
+# Development
+.direnv
+.env
+.env.*
+
+# Git
+.git
+.gitignore
+
+# Documentation
+*.md
+!CLAUDE.md
+IMPLEMENTATION_PLAN.md
+
+# CI/CD
+Jenkinsfile
+.github
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose.yml
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Testing outputs only
+coverage
+
+# Prisma
+backend/prisma/migrations/*_test
