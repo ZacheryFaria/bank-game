@@ -60,6 +60,10 @@ export function useKeyBindings(
     } else if (cmd === "logout") {
       logout();
       onAction({ type: "logout" });
+    } else if (cmd === "login" || cmd === "l") {
+      onAction({ type: "switchScreen", screen: "login" });
+    } else if (cmd === "register" || cmd === "r") {
+      onAction({ type: "switchScreen", screen: "register" });
     }
   }
 
