@@ -203,6 +203,72 @@ pipeline {
             }
         }
 
+        stage('Backend Tests') {
+            when {
+                expression {
+                    return sh(
+                        script: "docker run --rm ${DOCKER_IMAGE} sh -c 'cd backend && find src -name \"*.test.ts\" 2>/dev/null | wc -l'",
+                        returnStdout: true
+                    ).trim().toInteger() > 0
+                }
+            }
+            steps {
+                script {
+                    sh """
+                        # Create test database network
+                        docker network create ${BUILD_TAG}-test-net || true
+
+                        # Start PostgreSQL container for tests
+                        docker run -d \
+                            --name ${BUILD_TAG}-test-db \
+                            --network ${BUILD_TAG}-test-net \
+                            -e POSTGRES_USER=postgres \
+                            -e POSTGRES_PASSWORD=postgres \
+                            -e POSTGRES_DB=bank_game_test \
+                            postgres:18
+
+                        # Wait for PostgreSQL to be ready
+                        sleep 5
+                        docker exec ${BUILD_TAG}-test-db pg_isready -U postgres || sleep 5
+
+                        # Push schema to test database
+                        docker run --rm \
+                            --network ${BUILD_TAG}-test-net \
+                            -e DATABASE_URL=postgresql://postgres:postgres@${BUILD_TAG}-test-db:5432/bank_game_test \
+                            ${DOCKER_IMAGE} sh -c 'cd backend && pnpm prisma db push --skip-generate --accept-data-loss'
+
+                        # Run backend tests
+                        docker run --rm \
+                            --network ${BUILD_TAG}-test-net \
+                            -e TEST_DATABASE_URL=postgresql://postgres:postgres@${BUILD_TAG}-test-db:5432/bank_game_test \
+                            ${DOCKER_IMAGE} sh -c 'cd backend && pnpm test'
+                    """
+                }
+            }
+
+            post {
+                always {
+                    sh """
+                        docker stop ${BUILD_TAG}-test-db || true
+                        docker rm ${BUILD_TAG}-test-db || true
+                        docker network rm ${BUILD_TAG}-test-net || true
+                    """
+                }
+                success {
+                    publishChecks name: 'Backend Tests',
+                        summary: 'Backend tests passed',
+                        conclusion: 'SUCCESS',
+                        detailsURL: "${env.BUILD_URL}console"
+                }
+                failure {
+                    publishChecks name: 'Backend Tests',
+                        summary: 'Backend tests failed',
+                        conclusion: 'FAILURE',
+                        detailsURL: "${env.BUILD_URL}console"
+                }
+            }
+        }
+
         stage('Cleanup Docker Image') {
             steps {
                 script {
