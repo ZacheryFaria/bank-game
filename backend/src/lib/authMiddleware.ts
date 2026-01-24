@@ -1,16 +1,16 @@
 /**
  * Authentication Middleware
- * Validates JWT from Authorization header and attaches user + bank to request
+ * Validates JWT from Authorization header and attaches bank to request
  */
 
 import type { FastifyRequest, FastifyReply } from 'fastify'
-import type { User, Bank } from '@prisma/client'
+import type { Bank } from '@prisma/client'
 import { verifyToken } from './auth.js'
 import prisma from './db.js'
 
 /**
  * Fastify preHandler hook for protected routes
- * Extracts and validates JWT, loads user + bank from database
+ * Extracts and validates JWT, loads bank from database
  */
 export async function authenticate(
   request: FastifyRequest,
@@ -31,20 +31,20 @@ export async function authenticate(
 
   const user = await prisma.user.findUnique({
     where: { id: payload.userId },
-    include: { bank: true },
+    select: {
+      bank: true,
+    },
   })
 
   if (!user?.bank) {
     return reply.status(401).send({ error: 'User or bank not found' })
   }
 
-  request.user = user
   request.bank = user.bank
 }
 
 declare module 'fastify' {
   interface FastifyRequest {
-    user?: User & { bank: Bank | null }
     bank?: Bank
   }
 }
