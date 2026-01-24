@@ -16,26 +16,16 @@ export function getAuthToken() {
 
 export const client = initClient(contract, {
   baseUrl: API_BASE_URL,
-  baseHeaders: () => {
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-    };
-    if (authToken) {
-      headers.Authorization = `Bearer ${authToken}`;
-    }
-    return headers;
+  baseHeaders: {
+    "Content-Type": "application/json",
+    Authorization: () => authToken ? `Bearer ${authToken}` : "",
   },
 });
 
 export const tsRestClient = initQueryClient(contract, {
   baseUrl: API_BASE_URL,
-  baseHeaders: () => {
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-    };
-    if (authToken) {
-      headers.Authorization = `Bearer ${authToken}`;
-    }
-    return headers;
+  baseHeaders: {
+    "Content-Type": "application/json",
+    Authorization: () => authToken ? `Bearer ${authToken}` : "",
   },
 });
