@@ -4,18 +4,26 @@
 
 ### ✅ Fully Implemented
 
-- **Authentication Routes** (`/api/auth/register`, `/api/auth/login`)
+- **Authentication Routes** (`/api/auth/register`, `/api/auth/login`, `/api/auth/refresh`)
   - User registration with bank creation
   - Password hashing (bcrypt)
-  - JWT generation (7-day expiry)
+  - JWT access token generation (7-day expiry)
+  - Refresh token generation (30-day expiry)
+  - Refresh token rotation (old token invalidated on use)
   - Input validation with Zod
   - Auto-initializes bank with market rates and equal risk allocation
 
-- **Bank Management Routes** (`/api/bank/*`)
-  - `GET /bank` - Get bank state with buckets
-  - `PUT /bank/rates` - Update interest rates
-  - `PUT /bank/allocation` - Update risk allocation (validates sum = 1.0)
-  - `POST /bank/collect` - Core game loop with rate limiting (60s cooldown)
+- **Authentication Middleware**
+  - JWT verification from `Authorization: Bearer <token>` header
+  - Automatic user and bank lookup
+  - Attaches `request.user` and `request.bank` to authenticated requests
+  - Returns 401 for invalid/missing/expired tokens
+
+- **Bank Management Routes** (`/api/bank/*`) - All protected with auth middleware
+  - `GET /bank` - Get bank state with buckets (requires auth)
+  - `PUT /bank/rates` - Update interest rates (requires auth)
+  - `PUT /bank/allocation` - Update risk allocation (requires auth, validates sum = 1.0)
+  - `POST /bank/collect` - Core game loop with rate limiting (requires auth, 60s cooldown)
 
 - **Leaderboard Routes** (`/api/banks/*`)
   - `GET /banks` - Paginated list with sorting (by equity/loans)
@@ -25,68 +33,67 @@
   - Returns fixed market rates and product configs
 
 - **Game Engine** (all modules complete)
-  - `CollectionSimulator` - Orchestrates collection flow
+  - `CollectionSimulator` - Orchestrates collection flow with deposit interest accrual
   - `DemandCalculator` - Rate-sensitive loan/deposit demand
   - `InterestCalculator` - Quarterly interest calculations
   - `DefaultRoller` - Deterministic seeded RNG for defaults
 
 - **Database Schema** (Prisma)
   - All tables implemented per design
+  - User model includes `refreshTokenHash` field
+
+- **Security & Configuration**
+  - Configurable CORS via `ALLOWED_ORIGINS` environment variable
+  - Refresh tokens hashed before storage
+  - Token rotation on refresh
 
 ### ⚠️ Issues & Missing Features
 
-**Critical Issues:**
-- No JWT verification middleware (all routes use `findFirst()` instead of auth)
-- JWT returned in JSON response (design calls for HTTP-only cookies)
-- No refresh token flow
-- Deposit bucket interest not accrued during collection
-- CORS allows all origins (hardcoded `origin: true`)
-- Routes at bank.ts:27, 54, 109, 152 have TODOs for auth
-
 **Lower Priority:**
+- JWT returned in JSON response (design calls for HTTP-only cookies) - currently using Bearer token in Authorization header
 - Quarterly snapshots schema exists but no generation logic
 - No tests
 - JWT secret defaults to hardcoded string if env var missing
 
 ---
 
-## Phase 1: Critical Fixes
+## Phase 1: Critical Fixes ✅ COMPLETED
 
-### 🔴 High Priority
+### ✅ High Priority - All Completed
 
-- [ ] **JWT Middleware**
-  - [ ] Create `src/lib/authMiddleware.ts`
-  - [ ] Fastify hook that reads JWT from `Authorization: Bearer <token>` header
-  - [ ] Verifies JWT using `verifyToken()`
-  - [ ] Looks up user and bank
-  - [ ] Attaches to `request.user` and `request.bank`
-  - [ ] Returns 401 if invalid/missing token
+- [x] **JWT Middleware**
+  - [x] Create `src/lib/authMiddleware.ts`
+  - [x] Fastify hook that reads JWT from `Authorization: Bearer <token>` header
+  - [x] Verifies JWT using `verifyToken()`
+  - [x] Looks up user and bank
+  - [x] Attaches to `request.user` and `request.bank`
+  - [x] Returns 401 if invalid/missing token
 
-- [ ] **Refresh Token Flow**
-  - [ ] Add `refreshToken` field to User model (or separate RefreshToken table)
-  - [ ] Create `POST /api/auth/refresh` endpoint
-  - [ ] Generate refresh token on login/register (30-day expiry)
-  - [ ] Refresh endpoint: validate refresh token → issue new access token
-  - [ ] Add rotation: invalidate old refresh token when used
+- [x] **Refresh Token Flow**
+  - [x] Add `refreshTokenHash` field to User model
+  - [x] Create `POST /api/auth/refresh` endpoint
+  - [x] Generate refresh token on login/register (30-day expiry)
+  - [x] Refresh endpoint: validate refresh token → issue new access token
+  - [x] Add rotation: invalidate old refresh token when used
 
-- [ ] **Update Bank Routes to Use Auth**
-  - [ ] `GET /bank` - Remove `findFirst()`, use `request.bank.id`
-  - [ ] `PUT /bank/rates` - Use `request.bank.id`
-  - [ ] `PUT /bank/allocation` - Use `request.bank.id`
-  - [ ] `POST /bank/collect` - Use `request.bank.id`
-  - [ ] Register auth middleware on all `/bank/*` routes
+- [x] **Update Bank Routes to Use Auth**
+  - [x] `GET /bank` - Remove `findFirst()`, use `request.bank.id`
+  - [x] `PUT /bank/rates` - Use `request.bank.id`
+  - [x] `PUT /bank/allocation` - Use `request.bank.id`
+  - [x] `POST /bank/collect` - Use `request.bank.id`
+  - [x] Register auth middleware on all `/bank/*` routes
 
-- [ ] **CORS Configuration**
-  - [ ] Create environment variable `ALLOWED_ORIGINS` (comma-separated)
-  - [ ] Update `server.ts` to read from env
-  - [ ] Default to `*` in development
-  - [ ] Restrict in production
+- [x] **CORS Configuration**
+  - [x] Create environment variable `ALLOWED_ORIGINS` (comma-separated)
+  - [x] Update `server.ts` to read from env
+  - [x] Default to `*` in development
+  - [x] Restrict in production
 
-- [ ] **Deposit Interest Accrual**
-  - [ ] Update `CollectionSimulator.ts` to calculate interest for existing deposits
-  - [ ] Add accrued interest to deposit bucket `currentBalance`
-  - [ ] Add updated deposit buckets to `updatedDepositBuckets` array
-  - [ ] Update collection route to persist deposit bucket updates
+- [x] **Deposit Interest Accrual**
+  - [x] Update `CollectionSimulator.ts` to calculate interest for existing deposits
+  - [x] Add accrued interest to deposit bucket `currentBalance`
+  - [x] Add updated deposit buckets to `updatedDepositBuckets` array
+  - [x] Update collection route to persist deposit bucket updates
 
 ---
 
@@ -238,8 +245,8 @@ backend/
 
 ## Known Issues to Document
 
-- [ ] Document that deposit interest accrual was missing (fixed in Phase 1)
-- [ ] Document auth middleware implementation approach
-- [ ] Document refresh token rotation strategy
-- [ ] Document CORS configuration for production
-- [ ] Document SQLite test setup for future contributors
+- [x] Document that deposit interest accrual was missing (fixed in Phase 1)
+- [x] Document auth middleware implementation approach
+- [x] Document refresh token rotation strategy
+- [x] Document CORS configuration for production
+- [ ] Document SQLite test setup for future contributors (pending Phase 2 implementation)
