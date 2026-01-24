@@ -4,13 +4,13 @@ import TextInput from "ink-text-input";
 import Spinner from "ink-spinner";
 import { client } from "../lib/api.js";
 import { useAuthStore } from "../lib/store.js";
+import { useCommandMode } from "../lib/CommandModeContext.js";
 
 type Props = {
   onSwitchToLogin: () => void;
-  commandMode?: boolean;
 };
 
-export function RegisterScreen({ onSwitchToLogin, commandMode = false }: Props) {
+export function RegisterScreen({ onSwitchToLogin }: Props) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [bankName, setBankName] = useState("");
@@ -18,14 +18,7 @@ export function RegisterScreen({ onSwitchToLogin, commandMode = false }: Props) 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const login = useAuthStore((state) => state.login);
-
-  const guardedOnChange = (setter: (value: string) => void) => {
-    return (value: string) => {
-      if (!commandMode) {
-        setter(value);
-      }
-    };
-  };
+  const { guardInput } = useCommandMode();
 
   const handleEmailSubmit = () => {
     if (email.trim()) {
@@ -97,13 +90,13 @@ export function RegisterScreen({ onSwitchToLogin, commandMode = false }: Props) 
           {step === "email" ? (
             <>
               <Text>Email:</Text>
-              <TextInput value={email} onChange={guardedOnChange(setEmail)} onSubmit={handleEmailSubmit} />
+              <TextInput value={email} onChange={guardInput(setEmail)} onSubmit={handleEmailSubmit} />
             </>
           ) : step === "bankName" ? (
             <>
               <Text>Email: {email}</Text>
               <Text>Bank Name:</Text>
-              <TextInput value={bankName} onChange={guardedOnChange(setBankName)} onSubmit={handleBankNameSubmit} />
+              <TextInput value={bankName} onChange={guardInput(setBankName)} onSubmit={handleBankNameSubmit} />
             </>
           ) : (
             <>
@@ -112,7 +105,7 @@ export function RegisterScreen({ onSwitchToLogin, commandMode = false }: Props) 
               <Text>Password (min 8 chars):</Text>
               <TextInput
                 value={password}
-                onChange={guardedOnChange(setPassword)}
+                onChange={guardInput(setPassword)}
                 onSubmit={handlePasswordSubmit}
                 mask="*"
               />

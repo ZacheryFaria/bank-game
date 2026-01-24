@@ -4,27 +4,20 @@ import TextInput from "ink-text-input";
 import Spinner from "ink-spinner";
 import { client } from "../lib/api.js";
 import { useAuthStore } from "../lib/store.js";
+import { useCommandMode } from "../lib/CommandModeContext.js";
 
 type Props = {
   onSwitchToRegister: () => void;
-  commandMode?: boolean;
 };
 
-export function LoginScreen({ onSwitchToRegister, commandMode = false }: Props) {
+export function LoginScreen({ onSwitchToRegister }: Props) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [step, setStep] = useState<"email" | "password">("email");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const login = useAuthStore((state) => state.login);
-
-  const guardedOnChange = (setter: (value: string) => void) => {
-    return (value: string) => {
-      if (!commandMode) {
-        setter(value);
-      }
-    };
-  };
+  const { guardInput } = useCommandMode();
 
   const handleEmailSubmit = () => {
     if (email.trim()) {
@@ -86,7 +79,7 @@ export function LoginScreen({ onSwitchToRegister, commandMode = false }: Props) 
           {step === "email" ? (
             <>
               <Text>Email:</Text>
-              <TextInput value={email} onChange={guardedOnChange(setEmail)} onSubmit={handleEmailSubmit} />
+              <TextInput value={email} onChange={guardInput(setEmail)} onSubmit={handleEmailSubmit} />
             </>
           ) : (
             <>
@@ -94,7 +87,7 @@ export function LoginScreen({ onSwitchToRegister, commandMode = false }: Props) 
               <Text>Password:</Text>
               <TextInput
                 value={password}
-                onChange={guardedOnChange(setPassword)}
+                onChange={guardInput(setPassword)}
                 onSubmit={handlePasswordSubmit}
                 mask="*"
               />
