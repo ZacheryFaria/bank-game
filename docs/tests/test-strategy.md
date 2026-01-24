@@ -4,6 +4,20 @@ Testing strategy for bank-game project. See `auth-tests.md` and `collection-test
 
 ---
 
+## Current Status
+
+**TUI Testing: ✅ Basic Setup Complete**
+- Vitest configured (`tui/vitest.config.ts`)
+- Scripts: `pnpm test`, `pnpm test:watch`, `pnpm test:ui`, `pnpm type-check`
+- Example smoke test for `LoginScreen` (3 tests passing)
+- Test utilities with TanStack Query provider (`src/__tests__/test-utils.tsx`)
+- Dependencies: vitest, ink-testing-library, @testing-library/react
+
+**Backend Testing: ❌ Not Yet Implemented**
+**Frontend Testing: ❌ Not Yet Implemented**
+
+---
+
 ## Backend Testing
 
 ### Unit Tests (`logic/`)
@@ -50,7 +64,7 @@ Focus on:
 ### Component Tests (ink-testing-library)
 
 Test React components in isolation:
-- `LoginScreen` - Email/password flow, error handling
+- `LoginScreen` - Email/password flow, error handling ✅ Basic smoke test
 - `RegisterScreen` - Multi-step registration, validation
 - `Dashboard` - Display bank data, collection functionality
 
@@ -59,6 +73,10 @@ Focus on:
 - User interaction (keypresses, input submission)
 - Error states and loading states
 - API integration (mocked API calls)
+
+**Test Utilities:**
+- `src/__tests__/test-utils.tsx` - Render helper with TanStack Query provider (✅ implemented)
+- `src/__tests__/mocks.ts` - Common mock data for users, banks, API responses (TODO: future improvement)
 
 ### Keybinding Tests
 

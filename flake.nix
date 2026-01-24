@@ -32,7 +32,7 @@
             echo "Node.js version: $(node --version)"
             echo "pnpm version: $(pnpm --version)"
             echo ""
-            echo "Run 'pnpm install' in backend/ and frontend/ to get started"
+            echo "Run 'pnpm install' in backend/ and tui/ to get started"
           '';
         };
       }

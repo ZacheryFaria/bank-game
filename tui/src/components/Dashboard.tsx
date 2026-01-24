@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient, QueryClient, QueryClientProvider
 import { tsRestClient } from "../lib/api.js";
 import { useAuthStore } from "../lib/store.js";
 import { useKeyBindings } from "../hooks/useKeyBindings.js";
+import type { BankRate } from "@bank-game/shared";
 
 const queryClient = new QueryClient();
 
@@ -108,7 +109,7 @@ function DashboardInner() {
         <>
           <Box flexDirection="column" borderStyle="round" borderColor="gray" padding={1}>
             <Text bold>📊 Interest Rates</Text>
-            {bank.rates.map((rate) => (
+            {bank.rates.map((rate: BankRate) => (
               <Text key={rate.product}>
                 {rate.product}: {formatPercent(rate.rate)}
               </Text>

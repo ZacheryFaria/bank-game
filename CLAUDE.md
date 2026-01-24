@@ -22,11 +22,42 @@ pnpm dev                 # Runs on :3001
 # TUI (Terminal Interface)
 cd tui
 pnpm dev                 # Connects to :3001
-
-# Web Frontend
-cd frontend
-pnpm dev                 # Runs on :5173, proxies API to :3001
 ```
+
+---
+
+## Testing & Validation
+
+**Validate changes before committing:**
+
+```bash
+# Type checking (fast - always run first)
+pnpm type-check              # Check all packages
+cd backend && pnpm type-check
+cd tui && pnpm type-check
+
+# Run tests
+cd tui && pnpm test          # Run TUI tests once
+cd tui && pnpm test:watch    # Run in watch mode
+cd tui && pnpm test:ui       # Open test UI in browser
+
+# Linting & formatting
+pnpm lint                    # Check linting
+pnpm format                  # Auto-format code
+```
+
+**Quick validation workflow:**
+```bash
+# Before committing TUI changes
+cd tui
+pnpm type-check && pnpm test && pnpm lint
+
+# Before committing backend changes
+cd backend
+pnpm type-check && pnpm lint
+```
+
+**Note:** `pnpm build` also type-checks but is slower. Use `pnpm type-check` for faster feedback during development.
 
 ---
 
@@ -57,11 +88,9 @@ pnpm dev                 # Runs on :5173, proxies API to :3001
 
 **TUI:** Ink (React for CLIs) + TypeScript, ts-rest client, TanStack Query, Zustand, vim-like keybindings
 
-**Web Frontend:** React 19 + Vite + TypeScript, Tailwind + shadcn/ui, TanStack Query + Table, Zustand
-
 **Shared:** ts-rest contract + Zod schemas (full type safety across stack)
 
-**Package Manager:** pnpm (workspace: backend, frontend, tui, packages/shared)
+**Package Manager:** pnpm (workspace: backend, tui, packages/shared)
 
 **Development:** Nix (flake.nix + direnv for reproducible dev environment)
 
@@ -181,11 +210,6 @@ bank-game/
 │   │   ├── components/   # React components
 │   │   ├── hooks/        # Custom hooks (useKeyBindings)
 │   │   └── lib/          # API client, Zustand store
-│
-├── frontend/             # Web interface (React + Vite)
-│   └── src/
-│       ├── components/   # UI components (shadcn/ui)
-│       └── pages/        # Route pages
 │
 ├── packages/
 │   └── shared/           # ts-rest contract + Zod schemas
