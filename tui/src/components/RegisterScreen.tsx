@@ -7,9 +7,10 @@ import { useAuthStore } from "../lib/store.js";
 
 type Props = {
   onSwitchToLogin: () => void;
+  commandMode?: boolean;
 };
 
-export function RegisterScreen({ onSwitchToLogin }: Props) {
+export function RegisterScreen({ onSwitchToLogin, commandMode = false }: Props) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [bankName, setBankName] = useState("");
@@ -17,6 +18,14 @@ export function RegisterScreen({ onSwitchToLogin }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const login = useAuthStore((state) => state.login);
+
+  const guardedOnChange = (setter: (value: string) => void) => {
+    return (value: string) => {
+      if (!commandMode) {
+        setter(value);
+      }
+    };
+  };
 
   const handleEmailSubmit = () => {
     if (email.trim()) {
@@ -88,13 +97,13 @@ export function RegisterScreen({ onSwitchToLogin }: Props) {
           {step === "email" ? (
             <>
               <Text>Email:</Text>
-              <TextInput value={email} onChange={setEmail} onSubmit={handleEmailSubmit} />
+              <TextInput value={email} onChange={guardedOnChange(setEmail)} onSubmit={handleEmailSubmit} />
             </>
           ) : step === "bankName" ? (
             <>
               <Text>Email: {email}</Text>
               <Text>Bank Name:</Text>
-              <TextInput value={bankName} onChange={setBankName} onSubmit={handleBankNameSubmit} />
+              <TextInput value={bankName} onChange={guardedOnChange(setBankName)} onSubmit={handleBankNameSubmit} />
             </>
           ) : (
             <>
@@ -103,7 +112,7 @@ export function RegisterScreen({ onSwitchToLogin }: Props) {
               <Text>Password (min 8 chars):</Text>
               <TextInput
                 value={password}
-                onChange={setPassword}
+                onChange={guardedOnChange(setPassword)}
                 onSubmit={handlePasswordSubmit}
                 mask="*"
               />

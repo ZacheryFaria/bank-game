@@ -7,15 +7,24 @@ import { useAuthStore } from "../lib/store.js";
 
 type Props = {
   onSwitchToRegister: () => void;
+  commandMode?: boolean;
 };
 
-export function LoginScreen({ onSwitchToRegister }: Props) {
+export function LoginScreen({ onSwitchToRegister, commandMode = false }: Props) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [step, setStep] = useState<"email" | "password">("email");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const login = useAuthStore((state) => state.login);
+
+  const guardedOnChange = (setter: (value: string) => void) => {
+    return (value: string) => {
+      if (!commandMode) {
+        setter(value);
+      }
+    };
+  };
 
   const handleEmailSubmit = () => {
     if (email.trim()) {
@@ -77,7 +86,7 @@ export function LoginScreen({ onSwitchToRegister }: Props) {
           {step === "email" ? (
             <>
               <Text>Email:</Text>
-              <TextInput value={email} onChange={setEmail} onSubmit={handleEmailSubmit} />
+              <TextInput value={email} onChange={guardedOnChange(setEmail)} onSubmit={handleEmailSubmit} />
             </>
           ) : (
             <>
@@ -85,7 +94,7 @@ export function LoginScreen({ onSwitchToRegister }: Props) {
               <Text>Password:</Text>
               <TextInput
                 value={password}
-                onChange={setPassword}
+                onChange={guardedOnChange(setPassword)}
                 onSubmit={handlePasswordSubmit}
                 mask="*"
               />

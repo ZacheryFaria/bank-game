@@ -17,7 +17,6 @@ export function getAuthToken() {
 export const client = initClient(contract, {
   baseUrl: API_BASE_URL,
   baseHeaders: {
-    "Content-Type": "application/json",
     Authorization: () => authToken ? `Bearer ${authToken}` : "",
   },
 });
@@ -25,7 +24,6 @@ export const client = initClient(contract, {
 export const tsRestClient = initQueryClient(contract, {
   baseUrl: API_BASE_URL,
   baseHeaders: {
-    "Content-Type": "application/json",
     Authorization: () => authToken ? `Bearer ${authToken}` : "",
   },
 });

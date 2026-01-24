@@ -27,11 +27,6 @@ export function App() {
         setScreen(action.screen);
       }
     },
-    {
-      // Disable vim keybindings on auth screens (always in text input)
-      // Command mode (:login, :register, :q) still works
-      disabled: !isAuthenticated,
-    },
   );
 
   if (isAuthenticated) {
@@ -50,7 +45,10 @@ export function App() {
   if (screen === "login") {
     return (
       <>
-        <LoginScreen onSwitchToRegister={() => setScreen("register")} />
+        <LoginScreen
+          onSwitchToRegister={() => setScreen("register")}
+          commandMode={commandMode}
+        />
         {commandMode && (
           <Box marginTop={1}>
             <Text color="yellow">:{command}</Text>
@@ -62,7 +60,10 @@ export function App() {
 
   return (
     <>
-      <RegisterScreen onSwitchToLogin={() => setScreen("login")} />
+      <RegisterScreen
+        onSwitchToLogin={() => setScreen("login")}
+        commandMode={commandMode}
+      />
       {commandMode && (
         <Box marginTop={1}>
           <Text color="yellow">:{command}</Text>
