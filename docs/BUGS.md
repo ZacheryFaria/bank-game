@@ -18,13 +18,6 @@ Tracked bugs and issues in the bank-game project.
 
 ## High Priority
 
-**TUI Token Not Persisted**
-- **Issue**: JWT token clears on app restart, forcing re-login every time
-- **Expected**: Token should be saved to `~/.bank-game/token` file
-- **Impact**: Poor UX, users must re-authenticate constantly
-- **Fix**: Save token to file on login, load on app start
-- **Files**: `tui/src/lib/store.ts`, `tui/src/App.tsx`
-
 **No Auto-refresh for Expiring Tokens**
 - **Issue**: Access tokens expire after 7 days with no automatic refresh
 - **Expected**: TUI should auto-refresh token before expiration using refresh token
@@ -45,9 +38,33 @@ Tracked bugs and issues in the bank-game project.
 - **Fix**: Migrate to ts-rest following pattern in `routes/api.ts`
 - **Files**: `backend/src/routes/banks.ts`, `backend/src/routes/market.ts`
 
+**No Client-Side Error Logging**
+- **Issue**: TUI errors not logged, making debugging difficult
+- **Expected**: Log client errors to `~/.bank-game/errors.log` or similar
+- **Impact**: Hard to diagnose issues in production
+- **Fix**: Add error logging utility that writes to user's home directory
+- **Files**: `tui/src/lib/` (new errorLogger.ts)
+
 ---
 
 ## Medium Priority
+
+**No Server Health Status Indicator**
+- **Issue**: TUI doesn't show server connection/health status
+- **Expected**: Visual indicator showing server status (connected, disconnected, error)
+- **Impact**: Users don't know if issues are client or server side
+- **Fix**: Poll `/health` endpoint and display status symbol in TUI
+- **Files**: `tui/src/components/Dashboard.tsx` or status bar component
+
+**Missing Development Fixtures**
+- **Issue**: No default test data for development
+- **Expected**: Pre-populate database with test user on dev server startup
+  - User: `dead@beef.com`
+  - Password: `deadbeef`
+  - Bank: `Beef Bank`
+- **Impact**: Tedious to manually create test account for every dev session
+- **Fix**: Create seed script or dev-only startup logic
+- **Files**: `backend/prisma/seed.ts` or `backend/src/server.ts`
 
 **Generic Error Messages**
 - **Issue**: Backend returns "Internal server error" without details
