@@ -32,7 +32,7 @@ const DepositBucketSchema = z.object({
   originalAmount: z.number(),
   currentBalance: z.number(),
   interestRate: z.number(),
-  maturityDate: z.date().nullable().optional(),
+  maturityDate: z.coerce.date().nullable().optional(),
 });
 
 const BankSchema = z.object({
@@ -42,8 +42,8 @@ const BankSchema = z.object({
   currentEquity: z.number(),
   currentLoans: z.number(),
   currentDeposits: z.number(),
-  lastCollectedAt: z.date(),
-  createdAt: z.date(),
+  lastCollectedAt: z.coerce.date(),
+  createdAt: z.coerce.date(),
   rates: z.array(BankRateSchema).optional(),
   allocations: z.array(BankAllocationSchema).optional(),
   loanBuckets: z.array(LoanBucketSchema).optional(),
@@ -57,7 +57,7 @@ const UserSchema = z.object({
 });
 
 const TransactionSchema = z.object({
-  timestamp: z.date(),
+  timestamp: z.coerce.date(),
   type: z.string(),
   amount: z.number(),
   loanBucketId: z.string().nullable().optional(),
@@ -66,8 +66,8 @@ const TransactionSchema = z.object({
 });
 
 const CollectionReportSchema = z.object({
-  gameTimeStart: z.date(),
-  gameTimeEnd: z.date(),
+  gameTimeStart: z.coerce.date(),
+  gameTimeEnd: z.coerce.date(),
   realHoursElapsed: z.number(),
   gameQuartersElapsed: z.number(),
   loansOriginated: z.number(),
