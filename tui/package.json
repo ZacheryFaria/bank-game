@@ -15,8 +15,7 @@
     "format": "prettier --write \"src/**/*.{ts,tsx}\"",
     "test": "vitest run",
     "test:watch": "vitest --watch",
-    "test:ui": "vitest --ui",
-    "type-check": "tsc --noEmit"
+    "test:ui": "vitest --ui"
   },
   "dependencies": {
     "@bank-game/shared": "workspace:*",
