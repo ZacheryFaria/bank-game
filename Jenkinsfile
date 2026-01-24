@@ -94,7 +94,7 @@ pipeline {
             post {
                 always {
                     archiveArtifacts artifacts: 'artifacts/backend/**/*', allowEmptyArchive: true, fingerprint: true
-                    sh 'rm -rf artifacts/backend'
+                    sh "docker run --rm -v \$(pwd)/artifacts:/artifacts ${DOCKER_IMAGE} rm -rf /artifacts/backend"
                 }
                 success {
                     publishChecks name: 'Backend Build',
@@ -128,7 +128,7 @@ pipeline {
             post {
                 always {
                     archiveArtifacts artifacts: 'artifacts/tui/**/*', allowEmptyArchive: true, fingerprint: true
-                    sh 'rm -rf artifacts/tui'
+                    sh "docker run --rm -v \$(pwd)/artifacts:/artifacts ${DOCKER_IMAGE} rm -rf /artifacts/tui"
                 }
                 success {
                     publishChecks name: 'TUI Build',
