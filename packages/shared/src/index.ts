@@ -1,2 +1,11 @@
-export { contract } from "./contract.js";
+export { contract, BankRateSchema, BankAllocationSchema, BankSchema, UserSchema } from "./contract.js";
 export type { Contract } from "./contract.js";
+
+// Export inferred types from schemas
+import { z } from "zod";
+import { BankRateSchema, BankAllocationSchema, BankSchema, UserSchema } from "./contract.js";
+
+export type BankRate = z.infer<typeof BankRateSchema>;
+export type BankAllocation = z.infer<typeof BankAllocationSchema>;
+export type Bank = z.infer<typeof BankSchema>;
+export type User = z.infer<typeof UserSchema>;

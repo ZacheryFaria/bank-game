@@ -52,8 +52,8 @@ export interface BankState {
   depositBuckets: DepositBucketData[]
 }
 
-export interface DemandResult {
-  product: Product
+export interface DemandResult<P extends Product = Product> {
+  product: P
   demandMultiplier: number
   hourlyDemand: number
 }

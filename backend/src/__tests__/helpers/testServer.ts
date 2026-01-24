@@ -1,8 +1,6 @@
 import Fastify, { FastifyInstance } from "fastify";
 import cors from "@fastify/cors";
 import { registerApiRoutes } from "../../routes/api.js";
-import { banksRoutes } from "../../routes/banks.js";
-import { marketRoutes } from "../../routes/market.js";
 
 export async function createTestServer(): Promise<FastifyInstance> {
   const fastify = Fastify({
@@ -18,8 +16,6 @@ export async function createTestServer(): Promise<FastifyInstance> {
   });
 
   await fastify.register(registerApiRoutes);
-  await fastify.register(banksRoutes, { prefix: "/api" });
-  await fastify.register(marketRoutes, { prefix: "/api" });
 
   return fastify;
 }

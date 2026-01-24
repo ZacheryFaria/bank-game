@@ -1,12 +1,33 @@
 import prisma from "../lib/db.js";
 import { simulateCollection } from "../engine/CollectionSimulator.js";
 import { COLLECT_COOLDOWN_SECONDS } from "../engine/constants.js";
-import type { BankState } from "../engine/types.js";
+import type { BankState, CollectionReport } from "../engine/types.js";
 import {
   convertBankDecimals,
   convertRateDecimals,
   convertAllocationDecimals,
 } from "../lib/prismaHelpers.js";
+
+type CollectBankSuccess = {
+  kind: "success";
+  report: CollectionReport;
+};
+
+type CollectBankRateLimitError = {
+  kind: "rate_limit";
+  error: string;
+  retryAfter: number;
+};
+
+type CollectBankNotFoundError = {
+  kind: "not_found";
+  error: string;
+};
+
+type CollectBankResult =
+  | CollectBankSuccess
+  | CollectBankRateLimitError
+  | CollectBankNotFoundError;
 
 export async function getBankById(bankId: string) {
   const bank = await prisma.bank.findUnique({
@@ -101,7 +122,7 @@ async function buildLoanBucketIdMap(
     id: string;
     product: string;
     riskClass: string;
-    originationHour: number;
+    originationHour: Date;
   }>,
 ): Promise<Map<string, string>> {
   const idMap = new Map<string, string>();
@@ -127,7 +148,7 @@ async function buildDepositBucketIdMap(
   newBuckets: Array<{
     id: string;
     product: string;
-    originationHour: number;
+    originationHour: Date;
   }>,
 ): Promise<Map<string, string>> {
   const idMap = new Map<string, string>();
@@ -257,7 +278,7 @@ async function createTransactions(
   }
 }
 
-export async function collectBank(bankId: string) {
+export async function collectBank(bankId: string): Promise<CollectBankResult> {
   const bank = await prisma.bank.findUnique({
     where: { id: bankId },
     include: {
@@ -273,7 +294,7 @@ export async function collectBank(bankId: string) {
   });
 
   if (!bank) {
-    return { success: false as const, error: "Bank not found" };
+    return { kind: "not_found", error: "Bank not found" };
   }
 
   const now = new Date();
@@ -382,7 +403,7 @@ export async function collectBank(bankId: string) {
     ) {
       const retryAfter = parseInt(error.message.split(":")[1], 10);
       return {
-        success: false as const,
+        kind: "rate_limit",
         error: "Too soon",
         retryAfter,
       };
@@ -390,5 +411,5 @@ export async function collectBank(bankId: string) {
     throw error;
   }
 
-  return { success: true as const, report };
+  return { kind: "success", report };
 }
