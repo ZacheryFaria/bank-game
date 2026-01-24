@@ -23,7 +23,7 @@ import type { BankRates, DemandResult } from './types.js'
 export function calculateLoanDemand(
   product: LoanProduct,
   yourRate: number
-): DemandResult {
+): DemandResult<LoanProduct> {
   const config = LOAN_PRODUCTS[product]
   const demandMultiplier =
     1 + (config.marketRate - yourRate) * config.sensitivity
@@ -47,7 +47,7 @@ export function calculateLoanDemand(
 export function calculateDepositDemand(
   product: DepositProduct,
   yourRate: number
-): DemandResult {
+): DemandResult<DepositProduct> {
   const config = DEPOSIT_PRODUCTS[product]
   const demandMultiplier =
     1 + (yourRate - config.marketRate) * config.sensitivity
@@ -63,8 +63,10 @@ export function calculateDepositDemand(
 /**
  * Calculate all loan demands based on bank's rates
  */
-export function calculateAllLoanDemands(bankRates: BankRates): DemandResult[] {
-  const results: DemandResult[] = []
+export function calculateAllLoanDemands(
+  bankRates: BankRates
+): DemandResult<LoanProduct>[] {
+  const results: DemandResult<LoanProduct>[] = []
 
   for (const product of Object.keys(LOAN_PRODUCTS) as LoanProduct[]) {
     const rate = bankRates[product]
@@ -81,8 +83,8 @@ export function calculateAllLoanDemands(bankRates: BankRates): DemandResult[] {
  */
 export function calculateAllDepositDemands(
   bankRates: BankRates
-): DemandResult[] {
-  const results: DemandResult[] = []
+): DemandResult<DepositProduct>[] {
+  const results: DemandResult<DepositProduct>[] = []
 
   for (const product of Object.keys(DEPOSIT_PRODUCTS) as DepositProduct[]) {
     const rate = bankRates[product]

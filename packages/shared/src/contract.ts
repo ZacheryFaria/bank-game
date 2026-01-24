@@ -17,7 +17,7 @@ const LoanBucketSchema = z.object({
   id: z.string(),
   product: z.string(),
   riskClass: z.string(),
-  originationHour: z.number(),
+  originationHour: z.coerce.date(),
   originalPrincipal: z.number(),
   currentBalance: z.number(),
   interestRate: z.number(),
@@ -28,7 +28,7 @@ const LoanBucketSchema = z.object({
 const DepositBucketSchema = z.object({
   id: z.string(),
   product: z.string(),
-  originationHour: z.number(),
+  originationHour: z.coerce.date(),
   originalAmount: z.number(),
   currentBalance: z.number(),
   interestRate: z.number(),
@@ -85,6 +85,44 @@ const CollectionReportSchema = z.object({
   updatedLoanBuckets: z.array(LoanBucketSchema),
   newDepositBuckets: z.array(DepositBucketSchema),
   updatedDepositBuckets: z.array(DepositBucketSchema),
+});
+
+const BankListItemSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  createdAt: z.coerce.date(),
+  currentEquity: z.number(),
+  currentLoans: z.number(),
+  currentDeposits: z.number(),
+  lastCollectedAt: z.coerce.date(),
+});
+
+const PaginationSchema = z.object({
+  page: z.number(),
+  limit: z.number(),
+  total: z.number(),
+  totalPages: z.number(),
+});
+
+const LoanProductInfoSchema = z.object({
+  product: z.string(),
+  marketRate: z.number(),
+  baseDemandPerHour: z.number(),
+  sensitivity: z.number(),
+  avgLoanSize: z.number(),
+});
+
+const DepositProductInfoSchema = z.object({
+  product: z.string(),
+  marketRate: z.number(),
+  baseInflowPerHour: z.number(),
+  sensitivity: z.number(),
+});
+
+const MarketRatesSchema = z.object({
+  rates: z.record(z.string(), z.number()),
+  loanProducts: z.array(LoanProductInfoSchema),
+  depositProducts: z.array(DepositProductInfoSchema),
 });
 
 export const contract = c.router({
@@ -218,6 +256,55 @@ export const contract = c.router({
       },
       body: z.null(),
       summary: "Trigger collection (rate limited: 1/min)",
+    },
+  },
+  banks: {
+    list: {
+      method: "GET",
+      path: "/api/banks",
+      responses: {
+        200: z.object({
+          banks: z.array(BankListItemSchema),
+          pagination: PaginationSchema,
+        }),
+      },
+      query: z.object({
+        page: z.coerce.number().optional(),
+        limit: z.coerce.number().optional(),
+        sortBy: z.enum(["equity", "loans"]).optional(),
+      }),
+      summary: "List all banks (leaderboard)",
+    },
+    getById: {
+      method: "GET",
+      path: "/api/banks/:id",
+      responses: {
+        200: BankSchema.extend({
+          _count: z
+            .object({
+              loanBuckets: z.number(),
+              depositBuckets: z.number(),
+            })
+            .optional(),
+        }),
+        404: z.object({
+          error: z.string(),
+        }),
+      },
+      pathParams: z.object({
+        id: z.string(),
+      }),
+      summary: "Get details of a specific bank",
+    },
+  },
+  market: {
+    getRates: {
+      method: "GET",
+      path: "/api/market/rates",
+      responses: {
+        200: MarketRatesSchema,
+      },
+      summary: "Get fixed market rates and product info",
     },
   },
 });

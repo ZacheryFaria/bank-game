@@ -1,0 +1,66 @@
+# Bank Game Configuration
+# Game mechanics and balance settings
+
+# Time conversion: 1 real hour = 1 game quarter (3 months)
+time:
+  multiplier: 2190 # hours in a quarter
+  maxIdleHours: 24 # Maximum idle time cap (maxIdleQuarters computed from this)
+
+# Rate limiting
+rateLimit:
+  collectCooldownSeconds: 60
+
+# Starting capital and operational costs
+economy:
+  startingEquity: 200000 # $200,000
+  reserveRequirement: 0.1 # 10% of deposits must be held in reserve
+  operatingCostRate: 0.01 # 1% of total assets per year
+
+# Fixed market rates (V1 - no dynamic rates)
+marketRates:
+  mortgage: 0.06 # 6%
+  auto: 0.07 # 7%
+  personal: 0.12 # 12%
+  credit_card: 0.22 # 22%
+  savings: 0.03 # 3%
+  cd: 0.04 # 4%
+
+# Loan product configuration
+loanProducts:
+  credit_card:
+    baseDemandPerHour: 5000
+    sensitivity: 0.3
+    avgLoanSize: 2500
+  personal:
+    baseDemandPerHour: 3000
+    sensitivity: 0.5
+    avgLoanSize: 8000
+  auto:
+    baseDemandPerHour: 4000
+    sensitivity: 0.4
+    avgLoanSize: 25000
+  mortgage:
+    baseDemandPerHour: 8000
+    sensitivity: 0.6
+    avgLoanSize: 250000
+
+# Deposit product configuration
+depositProducts:
+  savings:
+    baseInflowPerHour: 10000
+    sensitivity: 0.4
+  cd:
+    baseInflowPerHour: 5000
+    sensitivity: 0.8
+
+# Risk class default rates (annual)
+defaultRates:
+  super_prime: 0.005 # 0.5%
+  prime: 0.02 # 2%
+  near_prime: 0.06 # 6%
+  subprime: 0.15 # 15%
+
+# Default randomness variance range (multiplier)
+defaultVariance:
+  min: 0.8
+  max: 1.2
