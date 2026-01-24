@@ -93,7 +93,7 @@ export function LoginScreen({ onSwitchToRegister }: Props) {
           )}
           <Text> </Text>
           <Text dimColor>
-            Don't have an account? Press [r] to register
+            Don't have an account? Type [:register] to switch
           </Text>
           <Text dimColor>Press [:q] to quit</Text>
         </>

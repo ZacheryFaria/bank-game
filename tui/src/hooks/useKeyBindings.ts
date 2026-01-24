@@ -16,6 +16,7 @@ export type KeyBindingAction =
 export function useKeyBindings(
   context: KeyBindingContext,
   onAction: (action: KeyBindingAction) => void,
+  options?: { disabled?: boolean },
 ) {
   const [commandMode, setCommandMode] = useState(false);
   const [command, setCommand] = useState("");
@@ -23,6 +24,12 @@ export function useKeyBindings(
   const logout = useAuthStore((state) => state.logout);
 
   useInput((input, key) => {
+    // When disabled (e.g., user is typing in input field), ignore all keys
+    // except ":" which allows command mode to still work
+    const isDisabled = options?.disabled ?? false;
+    if (isDisabled && !commandMode && input !== ":") {
+      return;
+    }
     // Global vim-like command mode (:q, :quit, etc)
     if (input === ":" && !commandMode) {
       setCommandMode(true);
@@ -60,6 +67,10 @@ export function useKeyBindings(
     } else if (cmd === "logout") {
       logout();
       onAction({ type: "logout" });
+    } else if (cmd === "login" || cmd === "l") {
+      onAction({ type: "switchScreen", screen: "login" });
+    } else if (cmd === "register" || cmd === "r") {
+      onAction({ type: "switchScreen", screen: "register" });
     }
   }
 

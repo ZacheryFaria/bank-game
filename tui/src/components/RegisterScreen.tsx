@@ -111,7 +111,7 @@ export function RegisterScreen({ onSwitchToLogin }: Props) {
           )}
           <Text> </Text>
           <Text dimColor>
-            Already have an account? Press [l] to login
+            Already have an account? Type [:login] to switch
           </Text>
           <Text dimColor>Press [:q] to quit</Text>
         </>
