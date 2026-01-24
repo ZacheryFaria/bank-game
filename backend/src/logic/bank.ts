@@ -2,6 +2,11 @@ import prisma from "../lib/db.js";
 import { simulateCollection } from "../engine/CollectionSimulator.js";
 import { COLLECT_COOLDOWN_SECONDS } from "../engine/constants.js";
 import type { BankState } from "../engine/types.js";
+import {
+  convertBankDecimals,
+  convertRateDecimals,
+  convertAllocationDecimals,
+} from "../lib/prismaHelpers.js";
 
 export async function getBankById(bankId: string) {
   const bank = await prisma.bank.findUnique({
@@ -22,7 +27,7 @@ export async function getBankById(bankId: string) {
     return { success: false as const, error: "Bank not found" };
   }
 
-  return { success: true as const, bank };
+  return { success: true as const, bank: convertBankDecimals(bank) };
 }
 
 export async function updateBankRates(
@@ -50,7 +55,7 @@ export async function updateBankRates(
     where: { bankId },
   });
 
-  return { success: true as const, rates: updatedRates };
+  return { success: true as const, rates: convertRateDecimals(updatedRates) };
 }
 
 export async function updateBankAllocation(
@@ -83,7 +88,10 @@ export async function updateBankAllocation(
     where: { bankId },
   });
 
-  return { success: true as const, allocations: updatedAllocations };
+  return {
+    success: true as const,
+    allocations: convertAllocationDecimals(updatedAllocations),
+  };
 }
 
 async function buildLoanBucketIdMap(
@@ -269,20 +277,6 @@ export async function collectBank(bankId: string) {
   }
 
   const now = new Date();
-  const lastCollected = new Date(bank.lastCollectedAt);
-  const secondsSinceLastCollect =
-    (now.getTime() - lastCollected.getTime()) / 1000;
-
-  if (secondsSinceLastCollect < COLLECT_COOLDOWN_SECONDS) {
-    const retryAfter = Math.ceil(
-      COLLECT_COOLDOWN_SECONDS - secondsSinceLastCollect,
-    );
-    return {
-      success: false as const,
-      error: "Too soon",
-      retryAfter,
-    };
-  }
 
   const bankState: BankState = {
     id: bank.id,
@@ -319,43 +313,82 @@ export async function collectBank(bankId: string) {
 
   const report = simulateCollection(bankState, now);
 
-  await prisma.$transaction(async (tx) => {
-    await tx.bank.update({
-      where: { id: bank.id },
-      data: {
-        lastCollectedAt: now,
-        currentEquity: report.endingEquity,
-        currentLoans: report.endingLoans,
-        currentDeposits: report.endingDeposits,
-      },
+  try {
+    await prisma.$transaction(async (tx) => {
+      const cooldownThreshold = new Date(
+        now.getTime() - COLLECT_COOLDOWN_SECONDS * 1000,
+      );
+
+      const updateResult = await tx.bank.updateMany({
+        where: {
+          id: bank.id,
+          lastCollectedAt: { lte: cooldownThreshold },
+        },
+        data: {
+          lastCollectedAt: now,
+          currentEquity: report.endingEquity,
+          currentLoans: report.endingLoans,
+          currentDeposits: report.endingDeposits,
+        },
+      });
+
+      if (updateResult.count === 0) {
+        const currentBank = await tx.bank.findUnique({
+          where: { id: bank.id },
+          select: { lastCollectedAt: true },
+        });
+
+        if (currentBank) {
+          const currentSecondsSince =
+            (now.getTime() - new Date(currentBank.lastCollectedAt).getTime()) /
+            1000;
+          const retryAfter = Math.ceil(
+            COLLECT_COOLDOWN_SECONDS - currentSecondsSince,
+          );
+          throw new Error(`COOLDOWN_ACTIVE:${retryAfter}`);
+        }
+      }
+
+      await createNewLoanBuckets(tx, bank.id, report.newLoanBuckets);
+      await updateExistingLoanBuckets(tx, report.updatedLoanBuckets);
+      await createNewDepositBuckets(tx, bank.id, report.newDepositBuckets);
+      await updateExistingDepositBuckets(tx, report.updatedDepositBuckets);
+      await createCollectionRecord(tx, bank.id, now, report);
+
+      const loanBucketIdMap = await buildLoanBucketIdMap(
+        tx,
+        bank.id,
+        report.newLoanBuckets,
+      );
+      const depositBucketIdMap = await buildDepositBucketIdMap(
+        tx,
+        bank.id,
+        report.newDepositBuckets,
+      );
+
+      await createTransactions(
+        tx,
+        bank.id,
+        now,
+        report.transactions,
+        loanBucketIdMap,
+        depositBucketIdMap,
+      );
     });
-
-    await createNewLoanBuckets(tx, bank.id, report.newLoanBuckets);
-    await updateExistingLoanBuckets(tx, report.updatedLoanBuckets);
-    await createNewDepositBuckets(tx, bank.id, report.newDepositBuckets);
-    await updateExistingDepositBuckets(tx, report.updatedDepositBuckets);
-    await createCollectionRecord(tx, bank.id, now, report);
-
-    const loanBucketIdMap = await buildLoanBucketIdMap(
-      tx,
-      bank.id,
-      report.newLoanBuckets,
-    );
-    const depositBucketIdMap = await buildDepositBucketIdMap(
-      tx,
-      bank.id,
-      report.newDepositBuckets,
-    );
-
-    await createTransactions(
-      tx,
-      bank.id,
-      now,
-      report.transactions,
-      loanBucketIdMap,
-      depositBucketIdMap,
-    );
-  });
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message.startsWith("COOLDOWN_ACTIVE:")
+    ) {
+      const retryAfter = parseInt(error.message.split(":")[1], 10);
+      return {
+        success: false as const,
+        error: "Too soon",
+        retryAfter,
+      };
+    }
+    throw error;
+  }
 
   return { success: true as const, report };
 }
