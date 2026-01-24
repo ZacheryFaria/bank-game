@@ -34,7 +34,7 @@ pipeline {
         stage('Backend Type Check') {
             steps {
                 script {
-                    sh "docker run --rm ${DOCKER_IMAGE} sh -c 'cd backend && pnpm type-check || pnpm build'"
+                    sh "docker run --rm ${DOCKER_IMAGE} sh -c 'cd backend && pnpm type-check'"
                 }
             }
 
@@ -57,7 +57,7 @@ pipeline {
         stage('TUI Type Check') {
             steps {
                 script {
-                    sh "docker run --rm ${DOCKER_IMAGE} sh -c 'cd tui && pnpm type-check || pnpm build'"
+                    sh "docker run --rm ${DOCKER_IMAGE} sh -c 'cd tui && pnpm type-check'"
                 }
             }
 
@@ -183,7 +183,7 @@ pipeline {
             when {
                 expression {
                     return sh(
-                        script: "docker run --rm ${DOCKER_IMAGE} sh -c 'cd tui && ls src/**/*.test.tsx 2>/dev/null | wc -l'",
+                        script: "docker run --rm ${DOCKER_IMAGE} sh -c 'cd tui && find src -name \"*.test.tsx\" 2>/dev/null | wc -l'",
                         returnStdout: true
                     ).trim().toInteger() > 0
                 }
