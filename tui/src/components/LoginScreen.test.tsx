@@ -1,5 +1,5 @@
 import React from 'react';
-import { render } from 'ink-testing-library';
+import { render } from '../__tests__/test-utils.js';
 import { describe, it, expect, vi } from 'vitest';
 import { LoginScreen } from './LoginScreen.js';
 
