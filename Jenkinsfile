@@ -240,7 +240,7 @@ pipeline {
                         # Run backend tests
                         docker run --rm \
                             --network ${BUILD_TAG}-test-net \
-                            -e TEST_DATABASE_URL=postgresql://postgres:postgres@${BUILD_TAG}-test-db:5432/bank_game_test \
+                            -e DATABASE_URL=postgresql://postgres:postgres@${BUILD_TAG}-test-db:5432/bank_game_test \
                             ${DOCKER_IMAGE} sh -c 'cd backend && pnpm test'
                     """
                 }

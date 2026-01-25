@@ -4,9 +4,11 @@
  */
 
 import bcrypt from 'bcrypt'
+import crypto from 'crypto'
 import jwt from 'jsonwebtoken'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production'
+const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET || 'dev-refresh-secret-change-in-production'
 const SALT_ROUNDS = 10
 
 export interface JWTPayload {
@@ -72,18 +74,33 @@ export function verifyRefreshToken(token: string): JWTPayload | null {
 }
 
 /**
- * Hash a refresh token for storage
+ * Hash a refresh token for storage using HMAC-SHA256
+ * Note: We use HMAC-SHA256 instead of bcrypt because:
+ * 1. bcrypt has a 72-byte input limit (JWTs are ~250 chars)
+ * 2. Refresh tokens are already cryptographically secure JWTs
+ * 3. We don't need bcrypt's slow hashing (that's for passwords)
+ * 4. HMAC adds secret-key authentication on top of SHA-256
  */
-export async function hashRefreshToken(token: string): Promise<string> {
-  return bcrypt.hash(token, SALT_ROUNDS)
+export function hashRefreshToken(token: string): string {
+  return crypto.createHmac('sha256', REFRESH_TOKEN_SECRET).update(token).digest('hex');
 }
 
 /**
- * Verify a refresh token against a hash
+ * Verify a refresh token against a hash using constant-time comparison
  */
-export async function verifyRefreshTokenHash(
+export function verifyRefreshTokenHash(
   token: string,
   hash: string
-): Promise<boolean> {
-  return bcrypt.compare(token, hash)
+): boolean {
+  const tokenHash = crypto.createHmac('sha256', REFRESH_TOKEN_SECRET).update(token).digest('hex');
+
+  // Use constant-time comparison to prevent timing attacks
+  const tokenHashBuffer = Buffer.from(tokenHash, 'hex');
+  const hashBuffer = Buffer.from(hash, 'hex');
+
+  if (tokenHashBuffer.length !== hashBuffer.length) {
+    return false;
+  }
+
+  return crypto.timingSafeEqual(tokenHashBuffer, hashBuffer);
 }

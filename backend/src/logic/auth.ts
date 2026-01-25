@@ -82,7 +82,7 @@ export async function createUser(data: {
     userId: user.id,
     email: user.email,
   });
-  const refreshTokenHash = await hashRefreshToken(refreshToken);
+  const refreshTokenHash = hashRefreshToken(refreshToken);
 
   await prisma.user.update({
     where: { id: user.id },
@@ -130,7 +130,7 @@ export async function authenticateUser(data: {
     userId: user.id,
     email: user.email,
   });
-  const refreshTokenHash = await hashRefreshToken(refreshToken);
+  const refreshTokenHash = hashRefreshToken(refreshToken);
 
   await prisma.user.update({
     where: { id: user.id },
@@ -167,10 +167,11 @@ export async function refreshUserToken(data: { refreshToken: string }) {
     return { success: false as const, error: "Invalid refresh token" };
   }
 
-  const isValid = await verifyRefreshTokenHash(
+  const isValid = verifyRefreshTokenHash(
     data.refreshToken,
     user.refreshTokenHash,
   );
+
   if (!isValid) {
     return { success: false as const, error: "Invalid refresh token" };
   }
@@ -184,7 +185,7 @@ export async function refreshUserToken(data: { refreshToken: string }) {
     userId: user.id,
     email: user.email,
   });
-  const newRefreshTokenHash = await hashRefreshToken(newRefreshToken);
+  const newRefreshTokenHash = hashRefreshToken(newRefreshToken);
 
   await prisma.user.update({
     where: { id: user.id },
