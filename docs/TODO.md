@@ -47,8 +47,6 @@ Based on user testing feedback (2026-01-23):
 ### Backend
 
 - [ ] **Apply Decimal Helper to Bank Logic** - Use `convertBankDecimals()` in all bank endpoints
-- [x] **Migrate banks.ts and market.ts to ts-rest** - Complete ts-rest migration (deleted old route files, consolidated into api.ts)
-- [ ] **Deposit Bucket Interest Updates** - Update existing deposit buckets with accrued interest during collection (critical bug)
 - [ ] **Quarterly Snapshots** - Implement snapshot generation from transaction ledger
 - [ ] **Wrap Rate Upserts in Transaction** - Make rate updates atomic in `logic/bank.ts updateBankRates`
 - [ ] **Wrap Allocation Upserts in Transaction** - Make allocation updates atomic in `logic/bank.ts updateBankAllocation`
@@ -143,10 +141,6 @@ See `docs/tests/test-strategy.md` for full test plan.
 
 ### Backend
 
-- [x] **Extract constants to config.yml** - Game constants now in `backend/config.yml` with typed loader in `lib/config.ts`
-- [x] **Upgrade ts-rest for Zod 4 support** - Upgraded to 3.53.0-rc.1 for Zod 4 compatibility
-- [x] **Implement discriminated unions** - Added `kind` tag pattern for `CollectBankResult` types
-- [x] **Make DemandResult generic** - Properly typed as `DemandResult<LoanProduct>` and `DemandResult<DepositProduct>`
 - [ ] Add input sanitization for bank names
 
 ### TUI

@@ -109,7 +109,7 @@ export interface CollectionReport {
   endingEquity: number
   endingLoans: number
   endingDeposits: number
-  randomSeed: bigint
+  randomSeed: string
   transactions: TransactionRecord[]
   newLoanBuckets: LoanBucketData[]
   updatedLoanBuckets: LoanBucketData[]

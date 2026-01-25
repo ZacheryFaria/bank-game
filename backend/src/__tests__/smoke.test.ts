@@ -1,7 +1,8 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import {
   setupTestDatabase,
   cleanupTestDatabase,
+  resetTestDatabase,
 } from "./helpers/testDb.js";
 import { createTestServer, closeTestServer } from "./helpers/testServer.js";
 import type { FastifyInstance } from "fastify";
@@ -19,6 +20,10 @@ describe("Infrastructure Smoke Tests", () => {
   afterAll(async () => {
     await closeTestServer(server);
     await cleanupTestDatabase();
+  });
+
+  beforeEach(async () => {
+    await resetTestDatabase(prisma);
   });
 
   it("should start server successfully", () => {
@@ -42,7 +47,7 @@ describe("Infrastructure Smoke Tests", () => {
     expect(body.timestamp).toBeDefined();
   });
 
-  it("should have empty database on start", async () => {
+  it("should have empty database after reset", async () => {
     const userCount = await prisma.user.count();
     expect(userCount).toBe(0);
   });

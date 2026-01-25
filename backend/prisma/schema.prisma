@@ -151,7 +151,7 @@ model Collection {
   endingEquity         Decimal  @map("ending_equity") @db.Decimal(18, 2)
   endingLoans          Decimal  @map("ending_loans") @db.Decimal(18, 2)
   endingDeposits       Decimal  @map("ending_deposits") @db.Decimal(18, 2)
-  randomSeed           BigInt   @map("random_seed")
+  randomSeed           String   @map("random_seed") @db.Text
   createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   bank Bank @relation(fields: [bankId], references: [id], onDelete: Cascade)
