@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { Box, Text } from "ink";
 import Spinner from "ink-spinner";
 import { useQuery, useMutation, useQueryClient, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { tsRestClient } from "../lib/api.js";
-import { useAuthStore } from "../lib/store.js";
 import { useKeyBindings } from "../hooks/useKeyBindings.js";
+import { StatusBar } from "./ui/StatusBar.js";
+import { Screen } from "./ui/Screen.js";
+import { Section } from "./ui/Section.js";
 import type { BankRate } from "@bank-game/shared";
 
 const queryClient = new QueryClient();
@@ -43,14 +45,10 @@ function DashboardInner() {
     if (action.type === "collect") {
       collectMutation.mutate();
     }
+    if (action.type === "refresh") {
+      queryClientInstance.invalidateQueries({ queryKey: ["bank"] });
+    }
   });
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      refetch();
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [refetch]);
 
   if (isLoading) {
     return (
@@ -89,58 +87,53 @@ function DashboardInner() {
   const minutesSince = Math.floor(timeSinceCollection / 60000);
 
   return (
-    <Box flexDirection="column" padding={1}>
-      <Text bold color="cyan">
-        🏦 {bank.name}
-      </Text>
-      <Text> </Text>
-
-      <Box flexDirection="column" borderStyle="round" borderColor="gray" padding={1}>
-        <Text bold>💰 Financials</Text>
+    <Screen title={bank.name} icon="🏦">
+      <Section title="💰 Financials">
         <Text>Equity: <Text color="green">{formatCurrency(bank.currentEquity)}</Text></Text>
         <Text>Loans: <Text color="yellow">{formatCurrency(bank.currentLoans)}</Text></Text>
         <Text>Deposits: <Text color="blue">{formatCurrency(bank.currentDeposits)}</Text></Text>
         <Text>Total Assets: <Text color="cyan">{formatCurrency(bank.currentEquity + bank.currentLoans)}</Text></Text>
-      </Box>
+      </Section>
 
       <Text> </Text>
 
       {bank.rates && bank.rates.length > 0 && (
         <>
-          <Box flexDirection="column" borderStyle="round" borderColor="gray" padding={1}>
-            <Text bold>📊 Interest Rates</Text>
+          <Section title="📊 Interest Rates">
             {bank.rates.map((rate: BankRate) => (
               <Text key={rate.product}>
                 {rate.product}: {formatPercent(rate.rate)}
               </Text>
             ))}
-          </Box>
+          </Section>
           <Text> </Text>
         </>
       )}
 
-      <Box flexDirection="column" borderStyle="round" borderColor="gray" padding={1}>
-        <Text bold>⏰ Collection</Text>
+      <Section title="⏰ Collection">
         <Text>Last collected: {minutesSince} minute{minutesSince !== 1 ? "s" : ""} ago</Text>
-        {collectMutation.isPending ? (
-          <Box>
-            <Text color="green">
-              <Spinner type="dots" />
-            </Text>
-            <Text> Collecting...</Text>
-          </Box>
-        ) : collectMutation.isError ? (
-          <Text color="red">❌ {collectMutation.error?.message}</Text>
-        ) : collectMutation.isSuccess ? (
-          <Text color="green">✅ Collection successful!</Text>
-        ) : null}
-      </Box>
+        <Text dimColor>Press Ctrl+L to collect</Text>
+      </Section>
 
       <Text> </Text>
-      <Text dimColor>
-        [c] collect | [:logout] logout | [:q] quit
-      </Text>
-    </Box>
+      <StatusBar
+        items={[
+          { key: "Ctrl+H", label: "Help" },
+          { key: "Ctrl+L", label: "Collect" },
+          { key: "Ctrl+R", label: "Refresh" },
+          { key: "Ctrl+Q", label: "Logout" },
+        ]}
+        status={
+          collectMutation.isPending
+            ? { message: "⏳ Collecting...", color: "green" }
+            : collectMutation.isError
+            ? { message: `❌ ${collectMutation.error?.message}`, color: "red" }
+            : collectMutation.isSuccess
+            ? { message: "✅ Collection successful!", color: "green" }
+            : undefined
+        }
+      />
+    </Screen>
   );
 }
 

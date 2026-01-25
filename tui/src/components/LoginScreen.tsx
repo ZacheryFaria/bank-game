@@ -1,10 +1,11 @@
 import React, { useState } from "react";
 import { Box, Text } from "ink";
-import TextInput from "ink-text-input";
 import Spinner from "ink-spinner";
 import { client } from "../lib/api.js";
 import { useAuthStore } from "../lib/store.js";
-import { useCommandMode } from "../lib/CommandModeContext.js";
+import { StatusBar } from "./ui/StatusBar.js";
+import { Screen } from "./ui/Screen.js";
+import { InputBox } from "./ui/InputBox.js";
 
 type Props = {
   onSwitchToRegister: () => void;
@@ -17,7 +18,6 @@ export function LoginScreen({ onSwitchToRegister }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const login = useAuthStore((state) => state.login);
-  const { guardInput } = useCommandMode();
 
   const handleEmailSubmit = () => {
     if (email.trim()) {
@@ -54,19 +54,7 @@ export function LoginScreen({ onSwitchToRegister }: Props) {
   };
 
   return (
-    <Box flexDirection="column" padding={1}>
-      <Text bold color="cyan">
-        🏦 Bank Game - Login
-      </Text>
-      <Text> </Text>
-
-      {error && (
-        <>
-          <Text color="red">❌ {error}</Text>
-          <Text> </Text>
-        </>
-      )}
-
+    <Screen title="Bank Game - Login" icon="🏦">
       {loading ? (
         <Box>
           <Text color="green">
@@ -77,29 +65,38 @@ export function LoginScreen({ onSwitchToRegister }: Props) {
       ) : (
         <>
           {step === "email" ? (
-            <>
-              <Text>Email:</Text>
-              <TextInput value={email} onChange={guardInput(setEmail)} onSubmit={handleEmailSubmit} />
-            </>
+            <InputBox
+              label="Email"
+              value={email}
+              onChange={setEmail}
+              onSubmit={handleEmailSubmit}
+              placeholder="user@example.com"
+              error={error || undefined}
+            />
           ) : (
             <>
-              <Text>Email: {email}</Text>
-              <Text>Password:</Text>
-              <TextInput
+              <Text dimColor>Email: {email}</Text>
+              <Text> </Text>
+              <InputBox
+                label="Password"
                 value={password}
-                onChange={guardInput(setPassword)}
+                onChange={setPassword}
                 onSubmit={handlePasswordSubmit}
                 mask="*"
+                error={error || undefined}
               />
             </>
           )}
           <Text> </Text>
-          <Text dimColor>
-            Don't have an account? Type [:register] to switch
-          </Text>
-          <Text dimColor>Press [:q] to quit</Text>
+          <StatusBar
+            items={[
+              { key: "Enter", label: "Submit" },
+              { key: "Ctrl+T", label: "Register" },
+              { key: "Ctrl+Q", label: "Quit" },
+            ]}
+          />
         </>
       )}
-    </Box>
+    </Screen>
   );
 }
