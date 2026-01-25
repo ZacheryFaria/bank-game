@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { Box, Text } from "ink";
 import Spinner from "ink-spinner";
 import { useQuery, useMutation, useQueryClient, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { tsRestClient } from "../lib/api.js";
-import { useAuthStore } from "../lib/store.js";
 import { useKeyBindings } from "../hooks/useKeyBindings.js";
+import { StatusBar } from "./ui/StatusBar.js";
 import type { BankRate } from "@bank-game/shared";
 
 const queryClient = new QueryClient();
@@ -43,14 +43,10 @@ function DashboardInner() {
     if (action.type === "collect") {
       collectMutation.mutate();
     }
+    if (action.type === "refresh") {
+      queryClientInstance.invalidateQueries({ queryKey: ["bank"] });
+    }
   });
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      refetch();
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [refetch]);
 
   if (isLoading) {
     return (
@@ -137,9 +133,14 @@ function DashboardInner() {
       </Box>
 
       <Text> </Text>
-      <Text dimColor>
-        [c] collect | [:logout] logout | [:q] quit
-      </Text>
+      <StatusBar
+        items={[
+          { key: "Ctrl+H", label: "Help" },
+          { key: "Ctrl+L", label: "Collect" },
+          { key: "Ctrl+R", label: "Refresh" },
+          { key: "Ctrl+Q", label: "Logout" },
+        ]}
+      />
     </Box>
   );
 }

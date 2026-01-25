@@ -4,7 +4,7 @@ import TextInput from "ink-text-input";
 import Spinner from "ink-spinner";
 import { client } from "../lib/api.js";
 import { useAuthStore } from "../lib/store.js";
-import { useCommandMode } from "../lib/CommandModeContext.js";
+import { StatusBar } from "./ui/StatusBar.js";
 
 type Props = {
   onSwitchToLogin: () => void;
@@ -18,7 +18,6 @@ export function RegisterScreen({ onSwitchToLogin }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const login = useAuthStore((state) => state.login);
-  const { guardInput } = useCommandMode();
 
   const handleEmailSubmit = () => {
     if (email.trim()) {
@@ -90,13 +89,13 @@ export function RegisterScreen({ onSwitchToLogin }: Props) {
           {step === "email" ? (
             <>
               <Text>Email:</Text>
-              <TextInput value={email} onChange={guardInput(setEmail)} onSubmit={handleEmailSubmit} />
+              <TextInput value={email} onChange={setEmail} onSubmit={handleEmailSubmit} />
             </>
           ) : step === "bankName" ? (
             <>
               <Text>Email: {email}</Text>
               <Text>Bank Name:</Text>
-              <TextInput value={bankName} onChange={guardInput(setBankName)} onSubmit={handleBankNameSubmit} />
+              <TextInput value={bankName} onChange={setBankName} onSubmit={handleBankNameSubmit} />
             </>
           ) : (
             <>
@@ -105,17 +104,21 @@ export function RegisterScreen({ onSwitchToLogin }: Props) {
               <Text>Password (min 8 chars):</Text>
               <TextInput
                 value={password}
-                onChange={guardInput(setPassword)}
+                onChange={setPassword}
                 onSubmit={handlePasswordSubmit}
                 mask="*"
               />
             </>
           )}
           <Text> </Text>
-          <Text dimColor>
-            Already have an account? Type [:login] to switch
-          </Text>
-          <Text dimColor>Press [:q] to quit</Text>
+          <StatusBar
+            items={[
+              { key: "Tab", label: "Next field" },
+              { key: "Enter", label: "Submit" },
+              { key: "Ctrl+T", label: "Login" },
+              { key: "Ctrl+Q", label: "Quit" },
+            ]}
+          />
         </>
       )}
     </Box>
