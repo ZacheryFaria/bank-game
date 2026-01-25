@@ -26,9 +26,6 @@ None currently identified.
 - **Fix**: Add React error boundary component
 - **Files**: `tui/src/App.tsx`
 
-**~~banks.ts and market.ts Not Migrated to ts-rest~~** ✅ FIXED
-- All routes migrated to ts-rest contract in `backend/src/routes/api.ts`
-
 **No Client-Side Error Logging**
 - **Issue**: TUI errors not logged, making debugging difficult
 - **Expected**: Log client errors to `~/.bank-game/errors.log` or similar
@@ -77,10 +74,6 @@ None currently identified.
 - **Fix**: Check `isLoading` state and render spinner
 - **Files**: `tui/src/components/Dashboard.tsx`
 
-**~~Transaction Atomicity Issues~~** ✅ FIXED
-- Rate and allocation updates now wrapped in `prisma.$transaction()` for atomicity
-- Changes in `backend/src/logic/bank.ts` (`updateBankRates`, `updateBankAllocation`)
-
 **Quarterly Snapshots Not Generated**
 - **Issue**: Schema exists but no logic to generate snapshots from transaction ledger
 - **Expected**: Scheduled task to create quarterly financial snapshots
@@ -126,11 +119,6 @@ None currently identified.
 
 ## Security Concerns
 
-**~~No Rate Limiting on Auth Endpoints~~** ✅ FIXED
-- Global rate limiting (100 req/min) implemented via `@fastify/rate-limit`
-- Stricter auth endpoint rate limiting (5 req/min per IP) for login/register
-- Changes in `backend/src/server.ts` and `backend/src/routes/api.ts`
-
 **No HTTPS Enforcement**
 - **Issue**: Backend doesn't enforce HTTPS in production
 - **Expected**: Redirect HTTP to HTTPS or reject HTTP entirely
@@ -152,14 +140,6 @@ None currently identified.
 ---
 
 ## Performance Issues
-
-**~~No Database Indexes~~** ✅ FIXED
-- Added indexes for frequently queried fields:
-  - `User.createdAt` for registration queries
-  - `Bank.lastCollectedAt` for cooldown checks
-  - `Transaction.collectedAt` for collection time filtering
-  - Existing indexes on `Bank` equity/loans maintained
-- Changes in `backend/prisma/schema.prisma`
 
 **No Query Logging**
 - **Issue**: Can't identify slow database queries

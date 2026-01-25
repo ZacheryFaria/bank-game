@@ -1,6 +1,7 @@
 import { initServer } from "@ts-rest/fastify";
 import { contract } from "@bank-game/shared";
 import type { FastifyInstance } from "fastify";
+import rateLimit from "@fastify/rate-limit";
 import { authenticate } from "../lib/authMiddleware.js";
 import * as authLogic from "../logic/auth.js";
 import * as bankLogic from "../logic/bank.js";
@@ -194,42 +195,24 @@ export const router = s.router(contract, {
 });
 
 export async function registerApiRoutes(fastify: FastifyInstance) {
+  // Register stricter rate limit for auth endpoints
+  await fastify.register(
+    async (authScope) => {
+      await authScope.register(rateLimit, {
+        max: 5,
+        timeWindow: '1 minute',
+      });
+    },
+    { prefix: '/api/auth' }
+  );
+
   await fastify.register(s.plugin(router), {
     logInitialization: false,
     responseValidation: true,
   });
 
-  // Stricter rate limiting for auth endpoints
+  // Authentication middleware for bank endpoints
   fastify.addHook("preHandler", async (request, reply) => {
-    const isAuthEndpoint = request.url.startsWith("/api/auth/");
-
-    if (isAuthEndpoint) {
-      const rateLimitConfig = {
-        max: 5,
-        timeWindow: '1 minute',
-      };
-
-      const key = request.ip;
-      const current = (global as any)[`auth_ratelimit_${key}`] || { count: 0, resetAt: Date.now() + 60000 };
-
-      if (Date.now() > current.resetAt) {
-        current.count = 0;
-        current.resetAt = Date.now() + 60000;
-      }
-
-      if (current.count >= rateLimitConfig.max) {
-        const retryAfter = Math.ceil((current.resetAt - Date.now()) / 1000);
-        reply.status(429).send({
-          error: "Too many authentication attempts. Please try again later.",
-          retryAfter,
-        });
-        return;
-      }
-
-      current.count++;
-      (global as any)[`auth_ratelimit_${key}`] = current;
-    }
-
     if (request.url.startsWith("/api/bank")) {
       await authenticate(request, reply);
     }

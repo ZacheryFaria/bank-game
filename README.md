@@ -4,7 +4,7 @@ A multiplayer idle game where you manage a financial institution. Set interest r
 
 ## Status
 
-**Phase: Core Backend Complete - TUI Development**
+### Phase: Core Backend Complete - TUI Development
 
 The project has implemented:
 - Backend: Node.js 24 + Fastify + TypeScript + Prisma + ts-rest
@@ -50,10 +50,6 @@ cd bank-game
 # Load the Nix environment
 direnv allow  # Or: nix develop
 
-# Set up backend worktree
-git worktree add backend-dev feature/collection
-cd backend-dev
-
 # Copy environment file and configure database
 cp backend/.env.example backend/.env
 # Edit backend/.env and set DATABASE_URL, JWT_SECRET, REFRESH_TOKEN_SECRET
@@ -72,20 +68,21 @@ pnpm test
 
 ### Project Structure
 
-```
+```text
 bank-game/
-│   ├── backend/
-│   │   ├── src/
-│   │   │   ├── engine/    # Pure game logic functions
-│   │   │   ├── logic/     # Business logic layer
-│   │   │   ├── routes/    # API endpoints (ts-rest)
-│   │   │   ├── lib/       # Utilities (db, auth, config)
-│   │   │   └── __tests__/ # Test suite
-│   │   ├── prisma/        # Database schema
-│   │   └── config.yml     # Game configuration
-│   ├── packages/shared/   # ts-rest contract + Zod schemas
-│   ├── tui/              # Terminal user interface
-│   └── docs/             # Documentation
+├── backend/               # Fastify API server
+│   ├── src/
+│   │   ├── engine/        # Pure game logic functions
+│   │   ├── logic/         # Business logic layer
+│   │   ├── routes/        # API endpoints (ts-rest)
+│   │   ├── lib/           # Utilities (db, auth, config)
+│   │   └── __tests__/     # Test suite
+│   ├── prisma/            # Database schema
+│   └── config.yml         # Game configuration
+├── packages/shared/       # ts-rest contract + Zod schemas
+├── tui/                   # Terminal user interface
+├── web/                   # Web frontend (React + Vite)
+└── docs/                  # Documentation
 ```
 
 ## Development Status
@@ -101,9 +98,9 @@ bank-game/
 - [x] ts-rest contract for type-safe API
 
 ### In Progress
-- [ ] TUI implementation
+- [ ] TUI implementation (Ink-based terminal interface)
+- [ ] Web frontend (React + Bloomberg Terminal UI theme)
 - [ ] Financial statements generation
-- [ ] Comprehensive test coverage
-- [ ] Performance optimization
+- [ ] Expanding test coverage for edge cases and error handling
 
 See [docs/TODO.md](docs/TODO.md) for detailed task list.

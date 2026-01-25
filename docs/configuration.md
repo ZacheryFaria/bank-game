@@ -26,21 +26,23 @@ time:
 
 - **`multiplier`** (number): Hours in one game quarter
   - Default: `2190` (24 hours/day × 91.25 days/quarter)
-  - **Effect**: With 2190, 1 real hour = 180 game hours = 7.5 game days
-  - **Calculation**: Real hours are multiplied by (multiplier / 2190) to get game hours
+  - **Effect**: With 2190, 1 real hour = 1 game quarter = 2190 game hours
+  - **Calculation**: 1 real hour maps directly to 1 game quarter (see `CollectionSimulator.ts:63`)
+  - **Note**: This parameter is currently defined but not used in time calculations. The 1:1 real hour to game quarter mapping is hardcoded in the collection simulator.
 
-- **`maxIdleHours`** (number): Maximum game hours allowed per collection
-  - Default: `24` (1 game day)
+- **`maxIdleHours`** (number): Maximum real hours allowed per collection
+  - Default: `24` (24 real hours = 24 game quarters = 6 game years)
   - **Effect**: Prevents excessive advantage from long absences
-  - **Example**: Player offline for 1 week still only gets 24 game hours of progress
+  - **Example**: Player offline for 1 week still only gets 24 real hours (6 game years) of progress
 
-**Tuning Guide:**
+**Current Time Progression:**
 
-| Real Time Ratio | Multiplier | Description |
-|-----------------|------------|-------------|
-| 1 hour = 7.5 days (default) | 2190 | Idle game, slow progression |
-| 1 hour = 15 days | 4380 | Faster progression |
-| 1 hour = 30 days | 8760 | Very fast progression |
+| Real Time | Game Time | Description |
+|-----------|-----------|-------------|
+| 1 real hour (default) | 1 game quarter = 2190 hours = 91.25 days | Current hardcoded implementation |
+| 24 real hours (max idle) | 24 game quarters = 6 game years | Maximum progress per collection |
+
+**Note**: The multiplier parameter in config currently has no effect on time calculations. To change the time progression rate, you would need to modify `CollectionSimulator.ts` line 63.
 
 ---
 
