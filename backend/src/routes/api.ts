@@ -202,8 +202,37 @@ export async function registerApiRoutes(fastify: FastifyInstance) {
     responseValidation: true,
   });
 
-  // Add middleware to bank routes
+  // Stricter rate limiting for auth endpoints
   fastify.addHook("preHandler", async (request, reply) => {
+    const isAuthEndpoint = request.url.startsWith("/api/auth/");
+
+    if (isAuthEndpoint) {
+      const rateLimitConfig = {
+        max: 5,
+        timeWindow: '1 minute',
+      };
+
+      const key = request.ip;
+      const current = (global as any)[`auth_ratelimit_${key}`] || { count: 0, resetAt: Date.now() + 60000 };
+
+      if (Date.now() > current.resetAt) {
+        current.count = 0;
+        current.resetAt = Date.now() + 60000;
+      }
+
+      if (current.count >= rateLimitConfig.max) {
+        const retryAfter = Math.ceil((current.resetAt - Date.now()) / 1000);
+        reply.status(429).send({
+          error: "Too many authentication attempts. Please try again later.",
+          retryAfter,
+        });
+        return;
+      }
+
+      current.count++;
+      (global as any)[`auth_ratelimit_${key}`] = current;
+    }
+
     if (request.url.startsWith("/api/bank")) {
       await authenticate(request, reply);
     }

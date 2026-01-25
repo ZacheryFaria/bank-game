@@ -3,6 +3,7 @@ import 'dotenv/config'
 
 import Fastify, { FastifyInstance } from 'fastify'
 import cors from '@fastify/cors'
+import rateLimit from '@fastify/rate-limit'
 import { registerApiRoutes } from './routes/api.js'
 
 export async function createServer(): Promise<FastifyInstance> {
@@ -17,6 +18,13 @@ export async function createServer(): Promise<FastifyInstance> {
       allowedOrigins === '*'
         ? true
         : allowedOrigins.split(',').map(o => o.trim()),
+  })
+
+  await fastify.register(rateLimit, {
+    global: true,
+    max: 100,
+    timeWindow: '1 minute',
+    skipOnError: false,
   })
 
   // Health check endpoint
