@@ -271,9 +271,7 @@ describe("Auth API Integration Tests", () => {
       expect(body.error).toBeDefined();
     });
 
-    it.skip("should reject reused refresh token (after rotation)", async () => {
-      // TODO: This test reveals a bug where server.inject() receives a different
-      // token than what the test sends. Need to investigate Fastify inject behavior.
+    it("should reject reused refresh token (after rotation)", async () => {
       const userData = createTestUser();
 
       const registerResponse = await server.inject({
@@ -286,20 +284,21 @@ describe("Auth API Integration Tests", () => {
 
       await new Promise((resolve) => setTimeout(resolve, 1100));
 
-      await server.inject({
+      const firstRefreshResponse = await server.inject({
         method: "POST",
         url: "/api/auth/refresh",
-        payload: {
-          refreshToken: originalRefreshToken,
-        },
+        payload: { refreshToken: originalRefreshToken },
       });
+      const firstRefreshBody = JSON.parse(firstRefreshResponse.body);
+
+      expect(firstRefreshResponse.statusCode).toBe(200);
+      expect(firstRefreshBody.refreshToken).toBeDefined();
+      expect(firstRefreshBody.refreshToken).not.toBe(originalRefreshToken);
 
       const secondRefreshResponse = await server.inject({
         method: "POST",
         url: "/api/auth/refresh",
-        payload: {
-          refreshToken: originalRefreshToken,
-        },
+        payload: { refreshToken: originalRefreshToken },
       });
 
       expect(secondRefreshResponse.statusCode).toBe(401);
