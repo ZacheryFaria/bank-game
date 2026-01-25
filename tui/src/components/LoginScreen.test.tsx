@@ -37,7 +37,7 @@ describe('LoginScreen', () => {
     const mockSwitchToRegister = vi.fn();
     const { lastFrame } = render(<LoginScreen onSwitchToRegister={mockSwitchToRegister} />);
 
-    expect(lastFrame()).toContain('Email:');
-    expect(lastFrame()).not.toContain('Password:');
+    expect(lastFrame()).toContain('Email');
+    expect(lastFrame()).not.toContain('Password');
   });
 });

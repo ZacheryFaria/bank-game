@@ -5,6 +5,8 @@ import { useQuery, useMutation, useQueryClient, QueryClient, QueryClientProvider
 import { tsRestClient } from "../lib/api.js";
 import { useKeyBindings } from "../hooks/useKeyBindings.js";
 import { StatusBar } from "./ui/StatusBar.js";
+import { Screen } from "./ui/Screen.js";
+import { Section } from "./ui/Section.js";
 import type { BankRate } from "@bank-game/shared";
 
 const queryClient = new QueryClient();
@@ -85,38 +87,30 @@ function DashboardInner() {
   const minutesSince = Math.floor(timeSinceCollection / 60000);
 
   return (
-    <Box flexDirection="column" padding={1}>
-      <Text bold color="cyan">
-        🏦 {bank.name}
-      </Text>
-      <Text> </Text>
-
-      <Box flexDirection="column" borderStyle="round" borderColor="gray" padding={1}>
-        <Text bold>💰 Financials</Text>
+    <Screen title={bank.name} icon="🏦">
+      <Section title="💰 Financials">
         <Text>Equity: <Text color="green">{formatCurrency(bank.currentEquity)}</Text></Text>
         <Text>Loans: <Text color="yellow">{formatCurrency(bank.currentLoans)}</Text></Text>
         <Text>Deposits: <Text color="blue">{formatCurrency(bank.currentDeposits)}</Text></Text>
         <Text>Total Assets: <Text color="cyan">{formatCurrency(bank.currentEquity + bank.currentLoans)}</Text></Text>
-      </Box>
+      </Section>
 
       <Text> </Text>
 
       {bank.rates && bank.rates.length > 0 && (
         <>
-          <Box flexDirection="column" borderStyle="round" borderColor="gray" padding={1}>
-            <Text bold>📊 Interest Rates</Text>
+          <Section title="📊 Interest Rates">
             {bank.rates.map((rate: BankRate) => (
               <Text key={rate.product}>
                 {rate.product}: {formatPercent(rate.rate)}
               </Text>
             ))}
-          </Box>
+          </Section>
           <Text> </Text>
         </>
       )}
 
-      <Box flexDirection="column" borderStyle="round" borderColor="gray" padding={1}>
-        <Text bold>⏰ Collection</Text>
+      <Section title="⏰ Collection">
         <Text>Last collected: {minutesSince} minute{minutesSince !== 1 ? "s" : ""} ago</Text>
         {collectMutation.isPending ? (
           <Box>
@@ -130,7 +124,7 @@ function DashboardInner() {
         ) : collectMutation.isSuccess ? (
           <Text color="green">✅ Collection successful!</Text>
         ) : null}
-      </Box>
+      </Section>
 
       <Text> </Text>
       <StatusBar
@@ -141,7 +135,7 @@ function DashboardInner() {
           { key: "Ctrl+Q", label: "Logout" },
         ]}
       />
-    </Box>
+    </Screen>
   );
 }
 

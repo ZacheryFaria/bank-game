@@ -1,10 +1,11 @@
 import React, { useState } from "react";
 import { Box, Text } from "ink";
-import TextInput from "ink-text-input";
 import Spinner from "ink-spinner";
 import { client } from "../lib/api.js";
 import { useAuthStore } from "../lib/store.js";
 import { StatusBar } from "./ui/StatusBar.js";
+import { Screen } from "./ui/Screen.js";
+import { InputBox } from "./ui/InputBox.js";
 
 type Props = {
   onSwitchToLogin: () => void;
@@ -64,19 +65,7 @@ export function RegisterScreen({ onSwitchToLogin }: Props) {
   };
 
   return (
-    <Box flexDirection="column" padding={1}>
-      <Text bold color="cyan">
-        🏦 Bank Game - Register
-      </Text>
-      <Text> </Text>
-
-      {error && (
-        <>
-          <Text color="red">❌ {error}</Text>
-          <Text> </Text>
-        </>
-      )}
-
+    <Screen title="Bank Game - Register" icon="🏦">
       {loading ? (
         <Box>
           <Text color="green">
@@ -87,33 +76,45 @@ export function RegisterScreen({ onSwitchToLogin }: Props) {
       ) : (
         <>
           {step === "email" ? (
-            <>
-              <Text>Email:</Text>
-              <TextInput value={email} onChange={setEmail} onSubmit={handleEmailSubmit} />
-            </>
+            <InputBox
+              label="Email"
+              value={email}
+              onChange={setEmail}
+              onSubmit={handleEmailSubmit}
+              placeholder="user@example.com"
+              error={error || undefined}
+            />
           ) : step === "bankName" ? (
             <>
-              <Text>Email: {email}</Text>
-              <Text>Bank Name:</Text>
-              <TextInput value={bankName} onChange={setBankName} onSubmit={handleBankNameSubmit} />
+              <Text dimColor>Email: {email}</Text>
+              <Text> </Text>
+              <InputBox
+                label="Bank Name"
+                value={bankName}
+                onChange={setBankName}
+                onSubmit={handleBankNameSubmit}
+                placeholder="Your Bank Inc."
+                error={error || undefined}
+              />
             </>
           ) : (
             <>
-              <Text>Email: {email}</Text>
-              <Text>Bank Name: {bankName}</Text>
-              <Text>Password (min 8 chars):</Text>
-              <TextInput
+              <Text dimColor>Email: {email}</Text>
+              <Text dimColor>Bank Name: {bankName}</Text>
+              <Text> </Text>
+              <InputBox
+                label="Password (min 8 chars)"
                 value={password}
                 onChange={setPassword}
                 onSubmit={handlePasswordSubmit}
                 mask="*"
+                error={error || undefined}
               />
             </>
           )}
           <Text> </Text>
           <StatusBar
             items={[
-              { key: "Tab", label: "Next field" },
               { key: "Enter", label: "Submit" },
               { key: "Ctrl+T", label: "Login" },
               { key: "Ctrl+Q", label: "Quit" },
@@ -121,6 +122,6 @@ export function RegisterScreen({ onSwitchToLogin }: Props) {
           />
         </>
       )}
-    </Box>
+    </Screen>
   );
 }
