@@ -74,7 +74,6 @@ pnpm test
 
 ```
 bank-game/
-├── backend-dev/           # Backend worktree (feature/collection)
 │   ├── backend/
 │   │   ├── src/
 │   │   │   ├── engine/    # Pure game logic functions
@@ -87,8 +86,6 @@ bank-game/
 │   ├── packages/shared/   # ts-rest contract + Zod schemas
 │   ├── tui/              # Terminal user interface
 │   └── docs/             # Documentation
-├── tui-dev/              # TUI worktree (feature/web-frontend)
-└── financial-statements-dev/ # Financial statements worktree
 ```
 
 ## Development Status
