@@ -3,16 +3,9 @@ import { execSync } from "child_process";
 
 let testPrisma: PrismaClient | null = null;
 
-const TEST_DB_URL =
-  process.env.TEST_DATABASE_URL ||
-  "postgresql://postgres:postgres@localhost:5432/bank_game_test";
-
 export async function setupTestDatabase() {
-  process.env.DATABASE_URL = TEST_DB_URL;
-
   try {
     execSync("pnpm prisma db push --skip-generate --accept-data-loss", {
-      env: { ...process.env, DATABASE_URL: TEST_DB_URL },
       stdio: "pipe",
     });
   } catch (error) {
@@ -20,13 +13,7 @@ export async function setupTestDatabase() {
     throw error;
   }
 
-  testPrisma = new PrismaClient({
-    datasources: {
-      db: {
-        url: TEST_DB_URL,
-      },
-    },
-  });
+  testPrisma = new PrismaClient();
 
   await testPrisma.$connect();
 

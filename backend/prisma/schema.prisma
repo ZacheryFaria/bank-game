@@ -34,7 +34,7 @@ model Bank {
   currentLoans    Decimal @default(0) @map("current_loans") @db.Decimal(18, 2)
   currentDeposits Decimal @default(0) @map("current_deposits") @db.Decimal(18, 2)
 
-  user                User                 @relation(fields: [userId], references: [id])
+  user                User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   rates               BankRate[]
   allocations         BankAllocation[]
   loanBuckets         LoanBucket[]
