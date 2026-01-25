@@ -44,5 +44,8 @@ backend/prisma/migrations/
 # Temporary files
 tmp.md
 
+# Test results
+test-results/
+
 # MCP
 .playwright-mcp/

@@ -3,7 +3,6 @@ import {
   setupTestDatabase,
   cleanupTestDatabase,
   resetTestDatabase,
-  getTestPrisma,
 } from "./helpers/testDb.js";
 import { createTestServer, closeTestServer } from "./helpers/testServer.js";
 import { createTestUser } from "./helpers/factories.js";
@@ -63,20 +62,20 @@ describe("Auth API Integration Tests", () => {
       expect(dbUser).toBeDefined();
       expect(dbUser!.email).toBe(userData.email);
       expect(dbUser!.bank).toBeDefined();
-      expect(dbUser!.bank.name).toBe(userData.bankName);
+      expect(dbUser!.bank!.name).toBe(userData.bankName);
 
       const bankRates = await prisma.bankRate.findMany({
-        where: { bankId: dbUser!.bank.id },
+        where: { bankId: dbUser!.bank!.id },
       });
       expect(bankRates.length).toBeGreaterThan(0);
 
       const bankAllocations = await prisma.bankAllocation.findMany({
-        where: { bankId: dbUser!.bank.id },
+        where: { bankId: dbUser!.bank!.id },
       });
       expect(bankAllocations.length).toBe(4);
 
       const transactions = await prisma.transaction.findMany({
-        where: { bankId: dbUser!.bank.id },
+        where: { bankId: dbUser!.bank!.id },
       });
       expect(transactions.length).toBe(1);
       expect(transactions[0].type).toBe("initial_funding");
