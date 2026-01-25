@@ -9,7 +9,7 @@ type SectionProps = {
 
 export function Section({ title, children, borderColor = "gray" }: SectionProps) {
   return (
-    <Box flexDirection="column" borderStyle="round" borderColor={borderColor} paddingX={1}>
+    <Box flexDirection="column" borderStyle="round" borderColor={borderColor} padding={1}>
       {title && (
         <Text bold color={borderColor === "cyan" ? "cyan" : undefined}>
           {title}

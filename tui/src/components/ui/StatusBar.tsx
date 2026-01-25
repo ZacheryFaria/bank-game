@@ -8,11 +8,20 @@ type StatusBarItem = {
 
 type StatusBarProps = {
   items: StatusBarItem[];
+  status?: {
+    message: string;
+    color?: string;
+  };
 };
 
-export function StatusBar({ items }: StatusBarProps) {
+export function StatusBar({ items, status }: StatusBarProps) {
   return (
-    <Box borderStyle="single" borderColor="gray" paddingX={1}>
+    <Box borderStyle="single" borderColor="gray" paddingX={1} justifyContent="space-between">
+      {status ? (
+        <Text color={status.color}>{status.message}</Text>
+      ) : (
+        <Text> </Text>
+      )}
       <Text>
         {items.map((item, i) => (
           <React.Fragment key={item.key}>

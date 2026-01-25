@@ -112,17 +112,7 @@ function DashboardInner() {
 
       <Section title="⏰ Collection">
         <Text>Last collected: {minutesSince} minute{minutesSince !== 1 ? "s" : ""} ago</Text>
-        <Box height={1}>
-          {collectMutation.isPending ? (
-            <Text color="green">
-              <Spinner type="dots" /> Collecting...
-            </Text>
-          ) : collectMutation.isError ? (
-            <Text color="red">❌ {collectMutation.error?.message}</Text>
-          ) : collectMutation.isSuccess ? (
-            <Text color="green">✅ Collection successful!</Text>
-          ) : null}
-        </Box>
+        <Text dimColor>Press Ctrl+L to collect</Text>
       </Section>
 
       <Text> </Text>
@@ -133,6 +123,15 @@ function DashboardInner() {
           { key: "Ctrl+R", label: "Refresh" },
           { key: "Ctrl+Q", label: "Logout" },
         ]}
+        status={
+          collectMutation.isPending
+            ? { message: "⏳ Collecting...", color: "green" }
+            : collectMutation.isError
+            ? { message: `❌ ${collectMutation.error?.message}`, color: "red" }
+            : collectMutation.isSuccess
+            ? { message: "✅ Collection successful!", color: "green" }
+            : undefined
+        }
       />
     </Screen>
   );
