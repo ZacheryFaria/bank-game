@@ -13,7 +13,15 @@ Testing strategy for bank-game project. See `auth-tests.md` and `collection-test
 - Test utilities with TanStack Query provider (`src/__tests__/test-utils.tsx`)
 - Dependencies: vitest, ink-testing-library, @testing-library/react
 
-**Backend Testing: ❌ Not Yet Implemented**
+**Backend Testing: 🚧 In Progress**
+- ✅ Test infrastructure setup (Vitest + PostgreSQL test database)
+- ✅ Auth API integration tests (12/12 passing)
+  - Registration (success, duplicate email, missing fields)
+  - Login (success, invalid credentials)
+  - Token refresh (success, invalid token, rotation, deleted user)
+- ⏳ Collection API tests (next priority)
+- ⏳ Engine unit tests (CollectionSimulator, DemandCalculator, etc.)
+
 **Frontend Testing: ❌ Not Yet Implemented**
 
 ---
