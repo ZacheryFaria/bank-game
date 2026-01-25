@@ -4,6 +4,7 @@ import type { FastifyInstance } from "fastify";
 import { authenticate } from "../lib/authMiddleware.js";
 import * as authLogic from "../logic/auth.js";
 import * as bankLogic from "../logic/bank.js";
+import * as financialsLogic from "../logic/financials.js";
 import prisma from "../lib/db.js";
 import {
   MARKET_RATES,
@@ -164,6 +165,21 @@ export const router = s.router(contract, {
             percentage: Number(a.percentage),
           })),
         },
+      };
+    },
+    getFinancials: async ({ params, query }) => {
+      const result = await financialsLogic.getQuarterlySnapshots(
+        params.id,
+        query
+      );
+
+      if (!result.success) {
+        return { status: 404, body: { error: result.error || "Bank not found" } };
+      }
+
+      return {
+        status: 200,
+        body: { snapshots: result.snapshots || [] },
       };
     },
   },

@@ -7,6 +7,8 @@ import {
   convertRateDecimals,
   convertAllocationDecimals,
 } from "../lib/prismaHelpers.js";
+import { getQuartersCrossed } from "../engine/quarterUtils.js";
+import { generateQuarterlySnapshot } from "./snapshotGenerator.js";
 
 type CollectBankSuccess = {
   kind: "success";
@@ -395,6 +397,16 @@ export async function collectBank(bankId: string): Promise<CollectBankResult> {
         loanBucketIdMap,
         depositBucketIdMap,
       );
+
+      // Generate quarterly snapshots for any quarters crossed
+      const quartersCrossed = getQuartersCrossed(
+        report.gameTimeStart,
+        report.gameTimeEnd
+      );
+
+      for (const quarter of quartersCrossed) {
+        await generateQuarterlySnapshot(bank.id, quarter.quarterEnd, tx);
+      }
     });
   } catch (error) {
     if (
