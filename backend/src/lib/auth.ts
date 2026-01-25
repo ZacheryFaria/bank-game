@@ -86,12 +86,21 @@ export function hashRefreshToken(token: string): string {
 }
 
 /**
- * Verify a refresh token against a hash
+ * Verify a refresh token against a hash using constant-time comparison
  */
 export function verifyRefreshTokenHash(
   token: string,
   hash: string
 ): boolean {
   const tokenHash = crypto.createHmac('sha256', REFRESH_TOKEN_SECRET).update(token).digest('hex');
-  return tokenHash === hash;
+
+  // Use constant-time comparison to prevent timing attacks
+  const tokenHashBuffer = Buffer.from(tokenHash, 'hex');
+  const hashBuffer = Buffer.from(hash, 'hex');
+
+  if (tokenHashBuffer.length !== hashBuffer.length) {
+    return false;
+  }
+
+  return crypto.timingSafeEqual(tokenHashBuffer, hashBuffer);
 }
