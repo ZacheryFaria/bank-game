@@ -41,16 +41,19 @@ export function InputBox({
           mask={mask}
         />
       </Box>
-      {error && (
-        <Text color="red">
-          ❌ {error}
-        </Text>
-      )}
-      {showHelpText && !error && (
-        <Text dimColor>
-          {mask ? `${value.length} characters` : "Enter to submit"}
-        </Text>
-      )}
+      <Box minHeight={1}>
+        {error ? (
+          <Text color="red">
+            ❌ {error}
+          </Text>
+        ) : showHelpText ? (
+          <Text dimColor>
+            {mask ? `${value.length} characters` : "Enter to submit"}
+          </Text>
+        ) : (
+          <Text> </Text>
+        )}
+      </Box>
     </Box>
   );
 }

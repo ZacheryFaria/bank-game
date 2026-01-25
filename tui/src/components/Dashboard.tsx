@@ -112,18 +112,22 @@ function DashboardInner() {
 
       <Section title="⏰ Collection">
         <Text>Last collected: {minutesSince} minute{minutesSince !== 1 ? "s" : ""} ago</Text>
-        {collectMutation.isPending ? (
-          <Box>
-            <Text color="green">
-              <Spinner type="dots" />
-            </Text>
-            <Text> Collecting...</Text>
-          </Box>
-        ) : collectMutation.isError ? (
-          <Text color="red">❌ {collectMutation.error?.message}</Text>
-        ) : collectMutation.isSuccess ? (
-          <Text color="green">✅ Collection successful!</Text>
-        ) : null}
+        <Box minHeight={1}>
+          {collectMutation.isPending ? (
+            <Box>
+              <Text color="green">
+                <Spinner type="dots" />
+              </Text>
+              <Text> Collecting...</Text>
+            </Box>
+          ) : collectMutation.isError ? (
+            <Text color="red">❌ {collectMutation.error?.message}</Text>
+          ) : collectMutation.isSuccess ? (
+            <Text color="green">✅ Collection successful!</Text>
+          ) : (
+            <Text> </Text>
+          )}
+        </Box>
       </Section>
 
       <Text> </Text>
