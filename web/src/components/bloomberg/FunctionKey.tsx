@@ -9,7 +9,7 @@ interface FunctionKeyProps extends React.ButtonHTMLAttributes<HTMLButtonElement>
 }
 
 const FunctionKey = React.forwardRef<HTMLButtonElement, FunctionKeyProps>(
-  ({ className, keyLabel, description, variant = "orange", size = "md", ...props }, ref) => {
+  ({ className, keyLabel, description, variant = "orange", size = "md", type = "button", ...props }, ref) => {
     const variants = {
       orange: "bg-bloomberg-orange hover:bg-bloomberg-orange/80",
       blue: "bg-bloomberg-blue hover:bg-bloomberg-blue/80",
@@ -33,6 +33,7 @@ const FunctionKey = React.forwardRef<HTMLButtonElement, FunctionKeyProps>(
     return (
       <button
         ref={ref}
+        type={type}
         className={cn(
           "flex items-center font-mono transition-colors focus:outline-none focus:ring-1 focus:ring-ring",
           sizes[size].gap,

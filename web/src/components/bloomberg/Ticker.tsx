@@ -12,9 +12,10 @@ interface TickerProps extends React.HTMLAttributes<HTMLDivElement> {
 
 const Ticker = React.forwardRef<HTMLDivElement, TickerProps>(
   ({ className, symbol, value, change, changePercent, size = "md", ...props }, ref) => {
-    const isPositive = change !== undefined && change > 0
-    const isNegative = change !== undefined && change < 0
-    const isNeutral = change === undefined || change === 0
+    const delta = change ?? changePercent
+    const isPositive = delta !== undefined && delta > 0
+    const isNegative = delta !== undefined && delta < 0
+    const isNeutral = delta === undefined || delta === 0
 
     const sizes = {
       sm: {

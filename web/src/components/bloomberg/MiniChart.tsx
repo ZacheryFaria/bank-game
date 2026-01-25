@@ -18,13 +18,14 @@ const MiniChart = React.forwardRef<HTMLDivElement, MiniChartProps>(
       cyan: { stroke: "hsl(var(--bloomberg-cyan))", fill: "hsl(var(--bloomberg-cyan) / 0.2)" },
     }
 
-    const min = Math.min(...data)
-    const max = Math.max(...data)
+    const safeData = data.length < 2 ? [data[0] ?? 0, data[0] ?? 0] : data
+    const min = Math.min(...safeData)
+    const max = Math.max(...safeData)
     const range = max - min || 1
 
     const width = 100
-    const points = data.map((value, index) => {
-      const x = (index / (data.length - 1)) * width
+    const points = safeData.map((value, index) => {
+      const x = (index / (safeData.length - 1)) * width
       const y = height - ((value - min) / range) * height
       return `${x},${y}`
     }).join(" ")
@@ -73,7 +74,7 @@ interface BarChartProps extends React.HTMLAttributes<HTMLDivElement> {
 
 const BarChart = React.forwardRef<HTMLDivElement, BarChartProps>(
   ({ className, data, orientation = "horizontal", height = 120, ...props }, ref) => {
-    const max = Math.max(...data.map((d) => d.value))
+    const max = Math.max(1, ...data.map((d) => d.value))
 
     const colors = {
       amber: "bg-bloomberg-amber",

@@ -195,6 +195,16 @@
       transparent 2px
     );
   }
+
+  /* Scroll animation for ticker marquee */
+  @keyframes scroll {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(-100%);
+    }
+  }
 }
 
 @layer utilities {

@@ -51,7 +51,7 @@ export function Dashboard() {
     });
   };
 
-  const nim = bank.currentLoans > 0
+  const nim = bank.currentLoans > 0 && lendingRate[0] > 0
     ? ((lendingRate[0] - depositRate[0]) / lendingRate[0]) * 100
     : 0;
 

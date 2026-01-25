@@ -35,14 +35,16 @@ const formatValue = (
       formatted = value.toFixed(2)
       return `${prefix || ""}${formatted}${suffix || "%"}`
     case "compact":
-      if (value >= 1e12) {
-        formatted = (value / 1e12).toFixed(2) + "T"
-      } else if (value >= 1e9) {
-        formatted = (value / 1e9).toFixed(2) + "B"
-      } else if (value >= 1e6) {
-        formatted = (value / 1e6).toFixed(2) + "M"
-      } else if (value >= 1e3) {
-        formatted = (value / 1e3).toFixed(2) + "K"
+      const absValue = Math.abs(value)
+      const sign = value < 0 ? "-" : ""
+      if (absValue >= 1e12) {
+        formatted = sign + (absValue / 1e12).toFixed(2) + "T"
+      } else if (absValue >= 1e9) {
+        formatted = sign + (absValue / 1e9).toFixed(2) + "B"
+      } else if (absValue >= 1e6) {
+        formatted = sign + (absValue / 1e6).toFixed(2) + "M"
+      } else if (absValue >= 1e3) {
+        formatted = sign + (absValue / 1e3).toFixed(2) + "K"
       } else {
         formatted = value.toFixed(2)
       }
