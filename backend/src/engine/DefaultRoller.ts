@@ -85,9 +85,9 @@ function calculateBucketDefaults(
 export function calculateDefaults(
   loanBuckets: LoanBucketData[],
   gameQuarters: number,
-  seed: bigint
+  seed: string
 ): DefaultResult {
-  const rng = new SeededRandom(seed)
+  const rng = new SeededRandom(BigInt(seed))
   let totalDefaults = 0
   const defaultsByBucket = new Map<string, number>()
   const bucketUpdates = new Map<
@@ -134,18 +134,17 @@ export function calculateDefaults(
  *
  * @param bankId - Bank UUID
  * @param timestamp - Collection timestamp
- * @returns Seed as bigint
+ * @returns Seed as string
  */
-export function generateSeed(bankId: string, timestamp: Date): bigint {
-  // Simple hash: combine bank ID and timestamp
+export function generateSeed(bankId: string, timestamp: Date): string {
   const combined = `${bankId}-${timestamp.getTime()}`
   let hash = 0n
 
   for (let i = 0; i < combined.length; i++) {
     const char = BigInt(combined.charCodeAt(i))
     hash = (hash << 5n) - hash + char
-    hash = hash & hash // Convert to 32-bit integer equivalent
+    hash = hash & hash
   }
 
-  return hash < 0n ? -hash : hash
+  return (hash < 0n ? -hash : hash).toString()
 }

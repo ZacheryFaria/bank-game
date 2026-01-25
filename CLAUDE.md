@@ -13,15 +13,19 @@ pnpm install
 # Start PostgreSQL
 docker-compose up -d
 
-# Backend setup
+# Backend setup (first time only)
 cd backend
+cp .env.example .env     # Copy environment variables
 pnpm prisma:generate
 pnpm prisma:migrate
-pnpm dev                 # Runs on :3001
 
-# TUI (Terminal Interface)
-cd tui
-pnpm dev                 # Connects to :3001
+# Run all interfaces in parallel
+pnpm dev                 # Starts backend + tui + web
+
+# Or run individually:
+cd backend && pnpm dev   # API server on :3001
+cd tui && pnpm dev       # Terminal interface
+cd web && pnpm dev       # Web interface on :5173
 ```
 
 ---
@@ -35,6 +39,7 @@ pnpm dev                 # Connects to :3001
 pnpm type-check              # Check all packages
 cd backend && pnpm type-check
 cd tui && pnpm type-check
+cd web && pnpm type-check
 
 # Run tests
 cd tui && pnpm test          # Run TUI tests once
@@ -55,6 +60,10 @@ pnpm type-check && pnpm test && pnpm lint
 # Before committing backend changes
 cd backend
 pnpm type-check && pnpm lint
+
+# Before committing web changes
+cd web
+pnpm type-check && pnpm lint
 ```
 
 **Note:** `pnpm build` also type-checks but is slower. Use `pnpm type-check` for faster feedback during development.
@@ -73,6 +82,7 @@ pnpm type-check && pnpm lint
 - **`docs/architecture.md`** - Database schema, API endpoints, backend structure, collection flow
 - **`docs/game-design.md`** - Game mechanics, formulas, balance, multiplayer, deferred features
 - **`docs/tui-patterns.md`** - TUI implementation patterns, keybindings, ts-rest integration
+- **`docs/web-patterns.md`** - Web frontend patterns, React Query, authentication, routing
 - **`docs/wireframes.md`** - UI/UX wireframes for all screens
 
 ### Testing
@@ -88,9 +98,11 @@ pnpm type-check && pnpm lint
 
 **TUI:** Ink (React for CLIs) + TypeScript, ts-rest client, TanStack Query, Zustand, vim-like keybindings
 
+**Web:** React 19 + TypeScript + Vite, shadcn/ui (Bloomberg Terminal theme), TanStack Query, Zustand, React Router
+
 **Shared:** ts-rest contract + Zod schemas (full type safety across stack)
 
-**Package Manager:** pnpm (workspace: backend, tui, packages/shared)
+**Package Manager:** pnpm (workspace: backend, tui, web, packages/shared)
 
 **Development:** Nix (flake.nix + direnv for reproducible dev environment)
 
@@ -162,9 +174,9 @@ export const contract = c.router({
 1. **Define in contract first** (`packages/shared/src/contract.ts`)
 2. **Implement business logic** (`backend/src/logic/`)
 3. **Wire up thin handler** (`backend/src/routes/api.ts`)
-4. **Use in TUI** with full type safety via ts-rest client
+4. **Use in clients** (TUI/Web) with full type safety via ts-rest client
 
-See `docs/tui-patterns.md` for detailed examples.
+See `docs/tui-patterns.md` and `docs/web-patterns.md` for detailed examples.
 
 ### Adding a New TUI Screen
 
@@ -174,6 +186,15 @@ See `docs/tui-patterns.md` for detailed examples.
 4. **Use ts-rest client** for type-safe API calls
 
 See `docs/tui-patterns.md` for detailed examples.
+
+### Adding a New Web Page
+
+1. **Create page component** (`web/src/pages/`)
+2. **Add route** in `web/src/App.tsx`
+3. **Create API hooks** (`web/src/hooks/`) using React Query
+4. **Use Bloomberg UI components** from `web/src/components/bloomberg/`
+
+See `docs/web-patterns.md` for detailed examples.
 
 ---
 
@@ -211,6 +232,13 @@ bank-game/
 │   │   ├── hooks/        # Custom hooks (useKeyBindings)
 │   │   └── lib/          # API client, Zustand store
 │
+├── web/                  # Web frontend (React + Vite)
+│   ├── src/
+│   │   ├── components/   # UI components (Bloomberg + shadcn)
+│   │   ├── pages/        # Page components (Login, Dashboard, etc.)
+│   │   ├── hooks/        # Custom hooks (useAuth, useBank)
+│   │   └── lib/          # API client, stores, utils
+│
 ├── packages/
 │   └── shared/           # ts-rest contract + Zod schemas
 │
@@ -220,6 +248,7 @@ bank-game/
 │   ├── architecture.md
 │   ├── game-design.md
 │   ├── tui-patterns.md
+│   ├── web-patterns.md
 │   ├── wireframes.md
 │   └── tests/
 │

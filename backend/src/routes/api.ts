@@ -66,10 +66,7 @@ export const router = s.router(contract, {
         case "success":
           return {
             status: 200,
-            body: {
-              ...result.report,
-              randomSeed: result.report.randomSeed.toString(),
-            },
+            body: result.report,
           };
         case "rate_limit":
           return {

@@ -202,13 +202,22 @@ export function simulateCollection(
   currentEquity += interestResult.netInterestIncome
 
   for (const [bucketId, interest] of interestResult.depositInterestByBucket.entries()) {
-    const bucket = allDepositBuckets.find(b => b.id === bucketId)
-    if (bucket && interest > 0) {
+    if (interest <= 0) continue
+
+    const isExistingBucket = bankState.depositBuckets.some(b => b.id === bucketId)
+    const isNewBucket = newDepositBuckets.some(b => b.id === bucketId)
+
+    if (isExistingBucket) {
+      const bucket = bankState.depositBuckets.find(b => b.id === bucketId)!
       const updatedBucket: DepositBucketData = {
         ...bucket,
         currentBalance: bucket.currentBalance + interest,
       }
       updatedDepositBuckets.push(updatedBucket)
+      currentDeposits += interest
+    } else if (isNewBucket) {
+      const bucket = newDepositBuckets.find(b => b.id === bucketId)!
+      bucket.currentBalance += interest
       currentDeposits += interest
     }
   }
@@ -220,29 +229,33 @@ export function simulateCollection(
     randomSeed
   )
 
-  // Apply defaults to buckets
   for (const [
     bucketId,
     defaultAmount,
   ] of defaultResult.defaultsByBucket.entries()) {
     const update = defaultResult.bucketUpdates.get(bucketId)
     if (update) {
-      // Find the bucket and update it
-      const bucket = allLoanBuckets.find(b => b.id === bucketId)
-      if (bucket) {
+      const isExistingBucket = bankState.loanBuckets.some(b => b.id === bucketId)
+      const isNewBucket = newLoanBuckets.some(b => b.id === bucketId)
+
+      if (isExistingBucket) {
+        const bucket = bankState.loanBuckets.find(b => b.id === bucketId)!
         const updatedBucket: LoanBucketData = {
           ...bucket,
           currentBalance: update.currentBalance,
           activeLoanCount: update.activeLoanCount,
         }
         updatedLoanBuckets.push(updatedBucket)
+      } else if (isNewBucket) {
+        const bucket = newLoanBuckets.find(b => b.id === bucketId)!
+        bucket.currentBalance = update.currentBalance
+        bucket.activeLoanCount = update.activeLoanCount
       }
     }
 
-    // Record default transaction
     transactions.push({
       type: 'loan_default',
-      amount: -defaultAmount, // Negative = loss
+      amount: -defaultAmount,
       timestamp: gameTimeEnd,
       loanBucketId: bucketId,
       details: { gameQuartersElapsed },
