@@ -56,23 +56,23 @@ pipeline {
                     }
                 }
 
-                stage('TUI Type Check') {
+                stage('Web Type Check') {
                     steps {
                         script {
-                            sh "docker run --rm ${DOCKER_IMAGE} sh -c 'cd tui && pnpm type-check'"
+                            sh "docker run --rm ${DOCKER_IMAGE} sh -c 'cd web && pnpm type-check'"
                         }
                     }
 
                     post {
                         success {
-                            publishChecks name: 'TUI Type Check',
-                                summary: 'TUI TypeScript type checking passed',
+                            publishChecks name: 'Web Type Check',
+                                summary: 'Web TypeScript type checking passed',
                                 conclusion: 'SUCCESS',
                                 detailsURL: "${env.BUILD_URL}console"
                         }
                         failure {
-                            publishChecks name: 'TUI Type Check',
-                                summary: 'TUI TypeScript type checking failed',
+                            publishChecks name: 'Web Type Check',
+                                summary: 'Web TypeScript type checking failed',
                                 conclusion: 'FAILURE',
                                 detailsURL: "${env.BUILD_URL}console"
                         }
@@ -102,23 +102,23 @@ pipeline {
                     }
                 }
 
-                stage('TUI Build') {
+                stage('Web Build') {
                     steps {
                         script {
-                            sh "docker run --rm ${DOCKER_IMAGE} sh -c 'cd tui && pnpm build'"
+                            sh "docker run --rm ${DOCKER_IMAGE} sh -c 'cd web && pnpm build'"
                         }
                     }
 
                     post {
                         success {
-                            publishChecks name: 'TUI Build',
-                                summary: 'TUI built successfully',
+                            publishChecks name: 'Web Build',
+                                summary: 'Web built successfully',
                                 conclusion: 'SUCCESS',
                                 detailsURL: "${env.BUILD_URL}console"
                         }
                         failure {
-                            publishChecks name: 'TUI Build',
-                                summary: 'TUI build failed',
+                            publishChecks name: 'Web Build',
+                                summary: 'Web build failed',
                                 conclusion: 'FAILURE',
                                 detailsURL: "${env.BUILD_URL}console"
                         }
@@ -142,28 +142,28 @@ pipeline {
                     }
                 }
 
-                stage('TUI Lint') {
+                stage('Web Lint') {
                     steps {
                         script {
-                            sh "docker run --rm ${DOCKER_IMAGE} sh -c 'cd tui && pnpm lint' || true"
+                            sh "docker run --rm ${DOCKER_IMAGE} sh -c 'cd web && pnpm lint' || true"
                         }
                     }
 
                     post {
                         always {
-                            publishChecks name: 'TUI Lint',
-                                summary: 'TUI linting completed (warnings allowed)',
+                            publishChecks name: 'Web Lint',
+                                summary: 'Web linting completed (warnings allowed)',
                                 conclusion: 'NEUTRAL',
                                 detailsURL: "${env.BUILD_URL}console"
                         }
                     }
                 }
 
-                stage('TUI Tests') {
+                stage('Web Tests') {
                     when {
                         expression {
                             return sh(
-                                script: "docker run --rm ${DOCKER_IMAGE} sh -c 'cd tui && find src -name \"*.test.tsx\" 2>/dev/null | wc -l'",
+                                script: "docker run --rm ${DOCKER_IMAGE} sh -c 'cd web && find src -name \"*.test.tsx\" 2>/dev/null | wc -l'",
                                 returnStdout: true
                             ).trim().toInteger() > 0
                         }
@@ -172,10 +172,10 @@ pipeline {
                         script {
                             sh """
                                 docker run --rm -v \$(pwd)/artifacts:/artifacts ${DOCKER_IMAGE} sh -c '
-                                    cd tui &&
+                                    cd web &&
                                     pnpm test &&
-                                    mkdir -p /artifacts/tui &&
-                                    cp -r test-results /artifacts/tui/
+                                    mkdir -p /artifacts/web &&
+                                    cp -r test-results /artifacts/web/
                                 '
                             """
                         }
@@ -183,18 +183,18 @@ pipeline {
 
                     post {
                         always {
-                            junit testResults: 'artifacts/tui/test-results/junit.xml', allowEmptyResults: true
-                            sh "docker run --rm -v \$(pwd)/artifacts:/artifacts ${DOCKER_IMAGE} rm -rf /artifacts/tui"
+                            junit testResults: 'artifacts/web/test-results/junit.xml', allowEmptyResults: true
+                            sh "docker run --rm -v \$(pwd)/artifacts:/artifacts ${DOCKER_IMAGE} rm -rf /artifacts/web"
                         }
                         success {
-                            publishChecks name: 'TUI Tests',
-                                summary: 'TUI tests passed',
+                            publishChecks name: 'Web Tests',
+                                summary: 'Web tests passed',
                                 conclusion: 'SUCCESS',
                                 detailsURL: "${env.BUILD_URL}console"
                         }
                         failure {
-                            publishChecks name: 'TUI Tests',
-                                summary: 'TUI tests failed',
+                            publishChecks name: 'Web Tests',
+                                summary: 'Web tests failed',
                                 conclusion: 'FAILURE',
                                 detailsURL: "${env.BUILD_URL}console"
                         }
