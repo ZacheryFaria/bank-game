@@ -257,7 +257,6 @@ export const contract = c.router({
           retryAfter: z.number(),
         }),
       },
-      body: z.object({}),
       summary: "Trigger collection (rate limited: 1/min)",
     },
   },

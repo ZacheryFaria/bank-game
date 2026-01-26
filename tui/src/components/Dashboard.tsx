@@ -28,7 +28,7 @@ function DashboardInner() {
 
   const collectMutation = useMutation({
     mutationFn: async () => {
-      const result = await tsRestClient.bank.collect.mutation({ body: {} });
+      const result = await tsRestClient.bank.collect.mutation({ body: null });
       if (result.status === 200) {
         return result.body;
       } else if (result.status === 429) {
