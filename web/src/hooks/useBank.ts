@@ -22,7 +22,7 @@ export function useBank() {
   const collectMutation = useMutation({
     mutationFn: async () => {
       const response = await apiClient.bank.collect({
-        body: null,
+        body: {},
       });
 
       if (response.status === 429) {

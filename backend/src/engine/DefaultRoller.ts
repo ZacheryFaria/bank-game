@@ -138,12 +138,13 @@ export function calculateDefaults(
  */
 export function generateSeed(bankId: string, timestamp: Date): string {
   const combined = `${bankId}-${timestamp.getTime()}`
+  const MAX_SEED = 2147483647n // 2^31 - 1, keeps it within safe range
   let hash = 0n
 
   for (let i = 0; i < combined.length; i++) {
     const char = BigInt(combined.charCodeAt(i))
     hash = (hash << 5n) - hash + char
-    hash = hash & hash
+    hash = hash % MAX_SEED // Keep hash bounded
   }
 
   return (hash < 0n ? -hash : hash).toString()
