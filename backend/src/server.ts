@@ -22,6 +22,7 @@ export async function createServer(): Promise<FastifyInstance> {
       allowedOrigins === '*'
         ? true
         : allowedOrigins.split(',').map(o => o.trim()),
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE'],
   })
 
   const rateLimitMax =
