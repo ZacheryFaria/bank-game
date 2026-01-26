@@ -1,4 +1,4 @@
-import type { Bank } from "@prisma/client";
+import type { Bank, QuarterlySnapshot } from "@prisma/client";
 
 type PrismaBank = Bank & {
   rates?: any[];
@@ -64,4 +64,27 @@ export function convertAllocationDecimals(allocations: any[]): any[] {
     ...a,
     percentage: Number(a.percentage),
   }));
+}
+
+export function convertSnapshotDecimals(snapshot: QuarterlySnapshot): any {
+  return {
+    ...snapshot,
+    totalAssets: Number(snapshot.totalAssets),
+    totalLoans: Number(snapshot.totalLoans),
+    loanLossReserve: Number(snapshot.loanLossReserve),
+    cashAndReserves: Number(snapshot.cashAndReserves),
+    totalDeposits: Number(snapshot.totalDeposits),
+    totalLiabilities: Number(snapshot.totalLiabilities),
+    totalEquity: Number(snapshot.totalEquity),
+    interestIncome: Number(snapshot.interestIncome),
+    interestExpense: Number(snapshot.interestExpense),
+    netInterestIncome: Number(snapshot.netInterestIncome),
+    provisionForLosses: Number(snapshot.provisionForLosses),
+    operatingExpenses: Number(snapshot.operatingExpenses),
+    netIncome: Number(snapshot.netIncome),
+    capitalRatio: Number(snapshot.capitalRatio),
+    netInterestMargin: Number(snapshot.netInterestMargin),
+    returnOnEquity: Number(snapshot.returnOnEquity),
+    defaultRate: Number(snapshot.defaultRate),
+  };
 }
