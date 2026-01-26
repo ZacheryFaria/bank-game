@@ -3,6 +3,11 @@ import 'dotenv/config'
 
 import Fastify, { FastifyInstance } from 'fastify'
 import cors from '@fastify/cors'
+import rateLimit from '@fastify/rate-limit'
+import fastifySwagger from '@fastify/swagger'
+import fastifySwaggerUi from '@fastify/swagger-ui'
+import type { OpenAPIV3 } from 'openapi-types'
+import { createOpenApiSpec } from './lib/openapi.js'
 import { registerApiRoutes } from './routes/api.js'
 
 export async function createServer(): Promise<FastifyInstance> {
@@ -17,6 +22,35 @@ export async function createServer(): Promise<FastifyInstance> {
       allowedOrigins === '*'
         ? true
         : allowedOrigins.split(',').map(o => o.trim()),
+  })
+
+  await fastify.register(rateLimit, {
+    global: true,
+    max: 100,
+    timeWindow: '1 minute',
+    skipOnError: false,
+  })
+
+  // Generate OpenAPI specification
+  const openApiDocument = createOpenApiSpec()
+
+  // Register OpenAPI spec endpoint
+  await fastify.register(fastifySwagger, {
+    mode: 'static',
+    specification: {
+      document: openApiDocument as OpenAPIV3.Document,
+    },
+  })
+
+  // Register Swagger UI
+  await fastify.register(fastifySwaggerUi, {
+    routePrefix: '/api/docs',
+    uiConfig: {
+      docExpansion: 'list',
+      deepLinking: true,
+      defaultModelsExpandDepth: 2,
+    },
+    staticCSP: true,
   })
 
   // Health check endpoint
