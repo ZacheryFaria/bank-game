@@ -7,11 +7,12 @@ type PrismaTransaction = Omit<
 >;
 
 /**
- * Helper: Sum amounts from transactions, taking absolute value for outflows
+ * Helper: Sum transaction amounts preserving sign semantics.
+ * Convention: Positive = inflow/income, Negative = outflow/expense/loss
  */
 function sumTransactionAmounts(transactions: Transaction[]): number {
   return transactions.reduce((sum, tx) => {
-    return sum + Math.abs(Number(tx.amount));
+    return sum + Number(tx.amount);
   }, 0);
 }
 
@@ -99,10 +100,10 @@ export async function generateQuarterlySnapshot(
 
   // 3. Calculate income statement items
   const interestIncome = sumTransactionAmounts(groupedTx.interest_income);
-  const interestExpense = sumTransactionAmounts(groupedTx.interest_expense);
+  const interestExpense = -sumTransactionAmounts(groupedTx.interest_expense);
   const netInterestIncome = interestIncome - interestExpense;
-  const provisionForLosses = sumTransactionAmounts(groupedTx.loan_default);
-  const operatingExpenses = sumTransactionAmounts(groupedTx.operating_expense);
+  const provisionForLosses = -sumTransactionAmounts(groupedTx.loan_default);
+  const operatingExpenses = -sumTransactionAmounts(groupedTx.operating_expense);
   const netIncome = netInterestIncome - provisionForLosses - operatingExpenses;
 
   // 4. Query loan and deposit buckets at quarter end
