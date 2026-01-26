@@ -1,4 +1,4 @@
-import type { Bank } from "@prisma/client";
+import type { Bank, QuarterlySnapshot } from "@prisma/client";
 
 type PrismaBank = Bank & {
   rates?: any[];
@@ -7,6 +7,20 @@ type PrismaBank = Bank & {
   depositBuckets?: any[];
 };
 
+/**
+ * Converts Prisma Decimal types to JavaScript numbers for API responses.
+ *
+ * Why we convert:
+ * - Prisma uses Decimal.js for precise decimal arithmetic in PostgreSQL
+ * - JSON responses need plain numbers for client consumption
+ * - Conversion happens at API boundary (after DB operations complete)
+ *
+ * Precision considerations:
+ * - Numbers can safely represent integers up to 2^53 - 1 (~9 quadrillion)
+ * - Financial amounts stored with 2 decimal places (18,2 precision in DB)
+ * - For amounts up to $90 trillion, precision loss is negligible
+ * - If amounts exceed this, consider using string representation
+ */
 export function convertBankDecimals(bank: PrismaBank | null): any {
   if (!bank) return null;
 
@@ -50,4 +64,27 @@ export function convertAllocationDecimals(allocations: any[]): any[] {
     ...a,
     percentage: Number(a.percentage),
   }));
+}
+
+export function convertSnapshotDecimals(snapshot: QuarterlySnapshot): any {
+  return {
+    ...snapshot,
+    totalAssets: Number(snapshot.totalAssets),
+    totalLoans: Number(snapshot.totalLoans),
+    loanLossReserve: Number(snapshot.loanLossReserve),
+    cashAndReserves: Number(snapshot.cashAndReserves),
+    totalDeposits: Number(snapshot.totalDeposits),
+    totalLiabilities: Number(snapshot.totalLiabilities),
+    totalEquity: Number(snapshot.totalEquity),
+    interestIncome: Number(snapshot.interestIncome),
+    interestExpense: Number(snapshot.interestExpense),
+    netInterestIncome: Number(snapshot.netInterestIncome),
+    provisionForLosses: Number(snapshot.provisionForLosses),
+    operatingExpenses: Number(snapshot.operatingExpenses),
+    netIncome: Number(snapshot.netIncome),
+    capitalRatio: Number(snapshot.capitalRatio),
+    netInterestMargin: Number(snapshot.netInterestMargin),
+    returnOnEquity: Number(snapshot.returnOnEquity),
+    defaultRate: Number(snapshot.defaultRate),
+  };
 }

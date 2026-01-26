@@ -101,6 +101,33 @@ const BankListItemSchema = z.object({
   lastCollectedAt: z.coerce.date(),
 });
 
+const QuarterlySnapshotSchema = z.object({
+  id: z.string(),
+  quarterEnd: z.coerce.date(),
+  fiscalYear: z.number(),
+  fiscalQuarter: z.number(),
+  totalAssets: z.number(),
+  totalLoans: z.number(),
+  loanLossReserve: z.number(),
+  cashAndReserves: z.number(),
+  totalDeposits: z.number(),
+  totalLiabilities: z.number(),
+  totalEquity: z.number(),
+  interestIncome: z.number(),
+  interestExpense: z.number(),
+  netInterestIncome: z.number(),
+  provisionForLosses: z.number(),
+  operatingExpenses: z.number(),
+  netIncome: z.number(),
+  capitalRatio: z.number(),
+  netInterestMargin: z.number(),
+  returnOnEquity: z.number(),
+  defaultRate: z.number(),
+  portfolioByProduct: z.record(z.string(), z.number()),
+  portfolioByRiskClass: z.record(z.string(), z.number()),
+  createdAt: z.coerce.date(),
+});
+
 const PaginationSchema = z.object({
   page: z.number(),
   limit: z.number(),
@@ -306,6 +333,27 @@ export const contract = c.router({
         id: z.string(),
       }),
       summary: "Get details of a specific bank",
+    },
+    getFinancials: {
+      method: "GET",
+      path: "/api/banks/:id/financials",
+      responses: {
+        200: z.object({
+          snapshots: z.array(QuarterlySnapshotSchema),
+        }),
+        404: z.object({
+          error: z.string(),
+        }),
+      },
+      pathParams: z.object({
+        id: z.string(),
+      }),
+      query: z.object({
+        year: z.coerce.number().optional(),
+        quarter: z.coerce.number().min(1).max(4).optional(),
+        limit: z.coerce.number().optional(),
+      }),
+      summary: "Get quarterly financial statements",
     },
   },
   market: {

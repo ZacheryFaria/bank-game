@@ -55,6 +55,7 @@ export async function createServer(): Promise<FastifyInstance> {
     staticCSP: true,
   })
 
+
   // Health check endpoint
   fastify.get('/health', () => {
     return { status: 'ok', timestamp: new Date().toISOString() }

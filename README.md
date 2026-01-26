@@ -4,12 +4,15 @@ A multiplayer idle game where you manage a financial institution. Set interest r
 
 ## Status
 
-**Phase: Bootstrap Complete - Ready for Development**
+### Phase: Core Backend Complete - TUI Development
 
-The project structure has been set up with:
-- Backend: Node.js 24 + Fastify + TypeScript + Prisma
-- Frontend: React 19 + Vite + TypeScript + Tailwind CSS
+The project has implemented:
+- Backend: Node.js 24 + Fastify + TypeScript + Prisma + ts-rest
+- TUI: Terminal user interface with Ink
 - Development environment managed via Nix flake
+- Comprehensive game engine with collection simulation
+- Authentication system with JWT tokens
+- Database schema with PostgreSQL
 
 ## Core Concept
 
@@ -18,16 +21,15 @@ The project structure has been set up with:
 - Balance risk vs reward through rate setting and portfolio allocation
 - Spreadsheet-heavy UI (income statements, balance sheets, portfolio breakdowns)
 
-## Design Documents
+## Documentation
 
-- [Core Gameplay Loop](design/core-gameplay-loop.md)
-- [Math & Formulas](design/math-and-formulas.md)
-- [Balance & Pacing](design/balance-and-pacing.md)
-- [Multiplayer](design/multiplayer.md)
-- [Architecture](design/architecture.md)
-- [Tech Stack](design/tech-stack.md)
-- [Wireframes](design/wireframes.md)
-- [Backlog](design/backlog.md)
+- [Architecture](docs/architecture.md) - API endpoints, database schema, deployment
+- [Game Design](docs/game-design.md) - Game mechanics and formulas
+- [TUI Patterns](docs/tui-patterns.md) - Terminal UI implementation patterns
+- [Wireframes](docs/wireframes.md) - UI/UX wireframes
+- [Test Strategy](docs/tests/test-strategy.md) - Testing approach
+- [TODO](docs/TODO.md) - Current priorities
+- [BUGS](docs/BUGS.md) - Known issues
 
 ## Development Setup
 
@@ -48,51 +50,57 @@ cd bank-game
 # Load the Nix environment
 direnv allow  # Or: nix develop
 
-# Copy environment files
+# Copy environment file and configure database
 cp backend/.env.example backend/.env
-cp frontend/.env.example frontend/.env
+# Edit backend/.env and set DATABASE_URL, JWT_SECRET, REFRESH_TOKEN_SECRET
 
-# Start backend (terminal 1)
+# Install dependencies and run migrations
 cd backend
 pnpm install
+pnpm prisma:migrate
+
+# Start backend server
 pnpm dev  # Runs on http://localhost:3001
 
-# Start frontend (terminal 2)
-cd frontend
-pnpm install
-pnpm dev  # Runs on http://localhost:5173
+# Run tests
+pnpm test
 ```
 
 ### Project Structure
 
-```
+```text
 bank-game/
-├── backend/           # Fastify API server
+├── backend/               # Fastify API server
 │   ├── src/
-│   │   ├── engine/    # Pure game logic functions
-│   │   ├── routes/    # API endpoints
-│   │   ├── services/  # Business logic
-│   │   └── server.ts  # Server entry point
-│   └── prisma/        # Database schema (to be added)
-├── frontend/          # React SPA
-│   └── src/
-│       ├── components/ # React components
-│       ├── lib/       # Utilities
-│       └── App.tsx    # Main app component
-└── design/            # Design documents
+│   │   ├── engine/        # Pure game logic functions
+│   │   ├── logic/         # Business logic layer
+│   │   ├── routes/        # API endpoints (ts-rest)
+│   │   ├── lib/           # Utilities (db, auth, config)
+│   │   └── __tests__/     # Test suite
+│   ├── prisma/            # Database schema
+│   └── config.yml         # Game configuration
+├── packages/shared/       # ts-rest contract + Zod schemas
+├── tui/                   # Terminal user interface
+├── web/                   # Web frontend (React + Vite)
+└── docs/                  # Documentation
 ```
 
-## Next Steps
+## Development Status
 
+### Completed
 - [x] Core gameplay loop design
 - [x] Math & formulas design
-- [x] Balance & pacing design
-- [x] Multiplayer mechanics design
-- [x] Technical architecture design
-- [x] Tech stack decision
-- [x] UI/UX wireframes
-- [x] Project bootstrap
-- [ ] Prisma schema implementation
-- [ ] Game engine implementation
-- [ ] API endpoints implementation
-- [ ] Frontend UI implementation
+- [x] Prisma schema implementation
+- [x] Game engine implementation (CollectionSimulator, DemandCalculator, InterestCalculator, DefaultRoller)
+- [x] API endpoints implementation (auth, bank management, collection, market data)
+- [x] Authentication system with JWT tokens
+- [x] Testing infrastructure with Vitest
+- [x] ts-rest contract for type-safe API
+
+### In Progress
+- [ ] TUI implementation (Ink-based terminal interface)
+- [ ] Web frontend (React + Bloomberg Terminal UI theme)
+- [ ] Financial statements generation
+- [ ] Expanding test coverage for edge cases and error handling
+
+See [docs/TODO.md](docs/TODO.md) for detailed task list.

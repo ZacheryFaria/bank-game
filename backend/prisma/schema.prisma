@@ -19,6 +19,7 @@ model User {
 
   bank Bank?
 
+  @@index([createdAt(sort: Desc)], name: "idx_users_created")
   @@map("users")
 }
 
@@ -45,6 +46,7 @@ model Bank {
 
   @@index([currentEquity(sort: Desc)], name: "idx_banks_equity")
   @@index([currentLoans(sort: Desc)], name: "idx_banks_loans")
+  @@index([lastCollectedAt], name: "idx_banks_last_collected")
   @@map("banks")
 }
 
@@ -131,6 +133,7 @@ model Transaction {
 
   @@index([bankId, timestamp], name: "idx_transactions_bank")
   @@index([bankId, type], name: "idx_transactions_type")
+  @@index([collectedAt], name: "idx_transactions_collected")
   @@map("transactions")
 }
 

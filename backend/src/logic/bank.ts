@@ -7,6 +7,8 @@ import {
   convertRateDecimals,
   convertAllocationDecimals,
 } from "../lib/prismaHelpers.js";
+import { getQuartersCrossed } from "../engine/quarterUtils.js";
+import { generateQuarterlySnapshot } from "./snapshotGenerator.js";
 
 type CollectBankSuccess = {
   kind: "success";
@@ -55,28 +57,32 @@ export async function updateBankRates(
   bankId: string,
   rates: Record<string, number>,
 ) {
-  for (const [product, rate] of Object.entries(rates)) {
-    await prisma.bankRate.upsert({
-      where: {
-        bankId_product: {
+  const result = await prisma.$transaction(async (tx) => {
+    for (const [product, rate] of Object.entries(rates)) {
+      await tx.bankRate.upsert({
+        where: {
+          bankId_product: {
+            bankId,
+            product,
+          },
+        },
+        update: { rate },
+        create: {
           bankId,
           product,
+          rate,
         },
-      },
-      update: { rate },
-      create: {
-        bankId,
-        product,
-        rate,
-      },
-    });
-  }
+      });
+    }
 
-  const updatedRates = await prisma.bankRate.findMany({
-    where: { bankId },
+    const updatedRates = await tx.bankRate.findMany({
+      where: { bankId },
+    });
+
+    return convertRateDecimals(updatedRates);
   });
 
-  return { success: true as const, rates: convertRateDecimals(updatedRates) };
+  return { success: true as const, rates: result };
 }
 
 export async function updateBankAllocation(
@@ -88,30 +94,34 @@ export async function updateBankAllocation(
     return { success: false as const, error: "Allocations must sum to 1.0" };
   }
 
-  for (const [riskClass, percentage] of Object.entries(allocations)) {
-    await prisma.bankAllocation.upsert({
-      where: {
-        bankId_riskClass: {
+  const result = await prisma.$transaction(async (tx) => {
+    for (const [riskClass, percentage] of Object.entries(allocations)) {
+      await tx.bankAllocation.upsert({
+        where: {
+          bankId_riskClass: {
+            bankId,
+            riskClass,
+          },
+        },
+        update: { percentage },
+        create: {
           bankId,
           riskClass,
+          percentage,
         },
-      },
-      update: { percentage },
-      create: {
-        bankId,
-        riskClass,
-        percentage,
-      },
-    });
-  }
+      });
+    }
 
-  const updatedAllocations = await prisma.bankAllocation.findMany({
-    where: { bankId },
+    const updatedAllocations = await tx.bankAllocation.findMany({
+      where: { bankId },
+    });
+
+    return convertAllocationDecimals(updatedAllocations);
   });
 
   return {
     success: true as const,
-    allocations: convertAllocationDecimals(updatedAllocations),
+    allocations: result,
   };
 }
 
@@ -395,6 +405,16 @@ export async function collectBank(bankId: string): Promise<CollectBankResult> {
         loanBucketIdMap,
         depositBucketIdMap,
       );
+
+      // Generate quarterly snapshots for any quarters crossed
+      const quartersCrossed = getQuartersCrossed(
+        report.gameTimeStart,
+        report.gameTimeEnd
+      );
+
+      for (const quarter of quartersCrossed) {
+        await generateQuarterlySnapshot(bank.id, quarter.quarterEnd, tx);
+      }
     });
   } catch (error) {
     if (

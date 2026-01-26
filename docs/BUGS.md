@@ -6,13 +6,7 @@ Tracked bugs and issues in the bank-game project.
 
 ## Critical
 
-**Deposit Bucket Interest Not Accruing**
-- **Issue**: During collection, existing deposit buckets are not updated with accrued interest
-- **Impact**: Deposit balances don't compound correctly over multiple collections
-- **Expected**: $10,000 deposit at 3% APR for 1 quarter should become $10,075
-- **Actual**: Balance stays at $10,000, only new deposits are created
-- **Fix**: Update deposit bucket balances in `CollectionSimulator` or `collectBank` logic
-- **Files**: `backend/src/engine/CollectionSimulator.ts`, `backend/src/logic/bank.ts`
+None currently identified.
 
 ---
 
@@ -31,12 +25,6 @@ Tracked bugs and issues in the bank-game project.
 - **Impact**: Poor UX, requires full restart
 - **Fix**: Add React error boundary component
 - **Files**: `tui/src/App.tsx`
-
-**banks.ts and market.ts Not Migrated to ts-rest**
-- **Issue**: Still using old route pattern, not integrated with ts-rest contract
-- **Impact**: Missing type safety, inconsistent API patterns
-- **Fix**: Migrate to ts-rest following pattern in `routes/api.ts`
-- **Files**: `backend/src/routes/banks.ts`, `backend/src/routes/market.ts`
 
 **No Client-Side Error Logging**
 - **Issue**: TUI errors not logged, making debugging difficult
@@ -86,13 +74,6 @@ Tracked bugs and issues in the bank-game project.
 - **Fix**: Check `isLoading` state and render spinner
 - **Files**: `tui/src/components/Dashboard.tsx`
 
-**Transaction Atomicity Issues**
-- **Issue**: Rate and allocation updates use multiple upserts without transactions
-- **Expected**: Wrap in database transaction for atomicity
-- **Impact**: Partial updates possible if operation fails mid-way
-- **Fix**: Use Prisma `$transaction` in business logic
-- **Files**: `backend/src/logic/bank.ts` (`updateBankRates`, `updateBankAllocation`)
-
 **Quarterly Snapshots Not Generated**
 - **Issue**: Schema exists but no logic to generate snapshots from transaction ledger
 - **Expected**: Scheduled task to create quarterly financial snapshots
@@ -138,12 +119,6 @@ Tracked bugs and issues in the bank-game project.
 
 ## Security Concerns
 
-**No Rate Limiting on Auth Endpoints**
-- **Issue**: No protection against brute force attacks on login
-- **Expected**: Rate limiting on `/auth/login` and `/auth/register`
-- **Impact**: Vulnerable to brute force
-- **Fix**: Add rate limiting middleware (e.g., `fastify-rate-limit`)
-
 **No HTTPS Enforcement**
 - **Issue**: Backend doesn't enforce HTTPS in production
 - **Expected**: Redirect HTTP to HTTPS or reject HTTP entirely
@@ -165,12 +140,6 @@ Tracked bugs and issues in the bank-game project.
 ---
 
 ## Performance Issues
-
-**No Database Indexes**
-- **Issue**: No indexes on frequently queried fields (bankId, userId, collectedAt)
-- **Expected**: Add indexes for common query patterns
-- **Impact**: Slow queries as data grows
-- **Fix**: Add Prisma schema indexes
 
 **No Query Logging**
 - **Issue**: Can't identify slow database queries
