@@ -12,37 +12,11 @@ None currently identified.
 
 ## High Priority
 
-**No Auto-refresh for Expiring Tokens**
-- **Issue**: Access tokens expire after 7 days with no automatic refresh
-- **Expected**: TUI should auto-refresh token before expiration using refresh token
-- **Impact**: Users get logged out unexpectedly
-- **Fix**: Add token expiration check and auto-refresh logic
-- **Files**: `tui/src/lib/api.ts`
-
-**Missing Error Boundary in TUI**
-- **Issue**: Uncaught errors crash the entire TUI with no recovery
-- **Expected**: Error boundary should catch errors and show recovery options
-- **Impact**: Poor UX, requires full restart
-- **Fix**: Add React error boundary component
-- **Files**: `tui/src/App.tsx`
-
-**No Client-Side Error Logging**
-- **Issue**: TUI errors not logged, making debugging difficult
-- **Expected**: Log client errors to `~/.bank-game/errors.log` or similar
-- **Impact**: Hard to diagnose issues in production
-- **Fix**: Add error logging utility that writes to user's home directory
-- **Files**: `tui/src/lib/` (new errorLogger.ts)
+None currently identified.
 
 ---
 
 ## Medium Priority
-
-**No Server Health Status Indicator**
-- **Issue**: TUI doesn't show server connection/health status
-- **Expected**: Visual indicator showing server status (connected, disconnected, error)
-- **Impact**: Users don't know if issues are client or server side
-- **Fix**: Poll `/health` endpoint and display status symbol in TUI
-- **Files**: `tui/src/components/Dashboard.tsx` or status bar component
 
 **Missing Development Fixtures**
 - **Issue**: No default test data for development
@@ -60,20 +34,6 @@ None currently identified.
 - **Impact**: Hard to debug issues for users and developers
 - **Fix**: Standardize error response format with codes and context
 
-**No Retry Logic for Failed Requests**
-- **Issue**: TUI doesn't retry failed API calls
-- **Expected**: Exponential backoff retry for transient network errors
-- **Impact**: Users see errors that could self-resolve
-- **Fix**: Add retry logic with exponential backoff
-- **Files**: `tui/src/lib/api.ts`
-
-**No Loading State During Initial Fetch**
-- **Issue**: Dashboard shows empty/stale data while loading
-- **Expected**: Spinner or skeleton UI during initial load
-- **Impact**: Confusing UX
-- **Fix**: Check `isLoading` state and render spinner
-- **Files**: `tui/src/components/Dashboard.tsx`
-
 **Quarterly Snapshots Not Generated**
 - **Issue**: Schema exists but no logic to generate snapshots from transaction ledger
 - **Expected**: Scheduled task to create quarterly financial snapshots
@@ -85,35 +45,9 @@ None currently identified.
 
 ## Low Priority / Polish
 
-**Input Handling Limitations**
-- No Ctrl+W to delete word in text inputs
-- No clipboard paste support
-- Arrow keys not handled in text inputs
-
 **Visual Polish Issues**
-- No colors for positive/negative equity changes
 - Timestamps show raw ISO strings, not human-readable
 - Currency formatting could be improved (e.g., $1,234,567.89 vs $1234567.89)
-- No ASCII art/logo on TUI startup
-
-**Duplicate Polling in Dashboard**
-- **Issue**: Dashboard uses both `setInterval` and TanStack Query's `refetchInterval`
-- **Expected**: Use only TanStack Query's built-in refetch
-- **Impact**: Unnecessary duplicate requests
-- **Fix**: Remove manual `setInterval`, rely on `refetchInterval` option
-- **Files**: `tui/src/components/Dashboard.tsx`
-
-**Missing Context Handler in useKeyBindings**
-- **Issue**: `KeyBindingContext` type includes "menu" but it's not handled
-- **Expected**: Either implement menu context or remove from type
-- **Impact**: Type confusion
-- **Files**: `tui/src/hooks/useKeyBindings.ts`
-
-**Password Validation Inconsistency**
-- **Issue**: RegisterScreen validates trimmed password length inconsistently
-- **Expected**: Consistent validation (either always trim or never trim)
-- **Impact**: Minor UX inconsistency
-- **Files**: `tui/src/components/RegisterScreen.tsx`
 
 ---
 

@@ -9,7 +9,7 @@ WORKDIR /app
 # Copy workspace config and package files
 COPY pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY backend/package.json backend/
-COPY tui/package.json tui/
+COPY web/package.json web/
 COPY packages/shared/package.json packages/shared/
 
 # Install dependencies
@@ -17,7 +17,7 @@ RUN pnpm install --frozen-lockfile
 
 # Copy source code
 COPY backend backend/
-COPY tui tui/
+COPY web web/
 COPY packages packages/
 COPY docs docs/
 

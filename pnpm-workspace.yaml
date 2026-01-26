@@ -1,6 +1,5 @@
 packages:
   - backend
-  - tui
   - web
   - packages/*
 

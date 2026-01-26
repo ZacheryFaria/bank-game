@@ -4,11 +4,11 @@ A multiplayer idle game where you manage a financial institution. Set interest r
 
 ## Status
 
-### Phase: Core Backend Complete - TUI Development
+### Phase: Core Backend Complete - Web Frontend Development
 
 The project has implemented:
 - Backend: Node.js 24 + Fastify + TypeScript + Prisma + ts-rest
-- TUI: Terminal user interface with Ink
+- Web: React frontend with Bloomberg Terminal UI theme
 - Development environment managed via Nix flake
 - Comprehensive game engine with collection simulation
 - Authentication system with JWT tokens
@@ -25,7 +25,7 @@ The project has implemented:
 
 - [Architecture](docs/architecture.md) - API endpoints, database schema, deployment
 - [Game Design](docs/game-design.md) - Game mechanics and formulas
-- [TUI Patterns](docs/tui-patterns.md) - Terminal UI implementation patterns
+- [Web Patterns](docs/web-patterns.md) - Web frontend implementation patterns
 - [Wireframes](docs/wireframes.md) - UI/UX wireframes
 - [Test Strategy](docs/tests/test-strategy.md) - Testing approach
 - [TODO](docs/TODO.md) - Current priorities
@@ -80,7 +80,6 @@ bank-game/
 │   ├── prisma/            # Database schema
 │   └── config.yml         # Game configuration
 ├── packages/shared/       # ts-rest contract + Zod schemas
-├── tui/                   # Terminal user interface
 ├── web/                   # Web frontend (React + Vite)
 └── docs/                  # Documentation
 ```
@@ -98,7 +97,6 @@ bank-game/
 - [x] ts-rest contract for type-safe API
 
 ### In Progress
-- [ ] TUI implementation (Ink-based terminal interface)
 - [ ] Web frontend (React + Bloomberg Terminal UI theme)
 - [ ] Financial statements generation
 - [ ] Expanding test coverage for edge cases and error handling

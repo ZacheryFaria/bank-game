@@ -6,13 +6,6 @@ Testing strategy for bank-game project. See `auth-tests.md` and `collection-test
 
 ## Current Status
 
-**TUI Testing: ✅ Basic Setup Complete**
-- Vitest configured (`tui/vitest.config.ts`)
-- Scripts: `pnpm test`, `pnpm test:watch`, `pnpm test:ui`, `pnpm type-check`
-- Example smoke test for `LoginScreen` (3 tests passing)
-- Test utilities with TanStack Query provider (`src/__tests__/test-utils.tsx`)
-- Dependencies: vitest, ink-testing-library, @testing-library/react
-
 **Backend Testing: 🚧 In Progress**
 - ✅ Test infrastructure setup (Vitest + PostgreSQL test database)
 - ✅ Auth API integration tests (12/12 passing)
@@ -67,47 +60,11 @@ Focus on:
 
 ---
 
-## TUI Testing
-
-### Component Tests (ink-testing-library)
-
-Test React components in isolation:
-- `LoginScreen` - Email/password flow, error handling ✅ Basic smoke test
-- `RegisterScreen` - Multi-step registration, validation
-- `Dashboard` - Display bank data, collection functionality
-
-Focus on:
-- Rendering logic
-- User interaction (keypresses, input submission)
-- Error states and loading states
-- API integration (mocked API calls)
-
-**Test Utilities:**
-- `src/__tests__/test-utils.tsx` - Render helper with TanStack Query provider (✅ implemented)
-- `src/__tests__/mocks.ts` - Common mock data for users, banks, API responses (TODO: future improvement)
-
-### Keybinding Tests
-
-Test vim-like keybinding system:
-- Context switching (auth, dashboard, menu)
-- Global commands (`:q`, `:logout`)
-- Screen-specific bindings (`c` for collect, `j/k` for navigation)
-
-### E2E Tests
-
-Full user flows:
-- Register → Dashboard → Collect
-- Login → Dashboard → Update Rates → Collect
-- Token refresh flow
-- Logout and re-login
-
----
-
 ## Contract Testing (ts-rest)
 
 Verify type safety across the stack:
 - Backend responses match contract schemas
-- TUI requests match contract schemas
+- Web frontend requests match contract schemas
 - TypeScript catches breaking changes at compile time
 
 Use ts-rest's built-in validation for automatic checking.
@@ -126,8 +83,8 @@ Use ts-rest's built-in validation for automatic checking.
 ### Frameworks
 
 - **Backend**: Vitest (fast, TypeScript-native)
-- **TUI**: ink-testing-library + Vitest
-- **E2E**: Playwright (if needed for web frontend later)
+- **Web Frontend**: Vitest + Testing Library
+- **E2E**: Playwright (for web frontend)
 
 ### CI/CD
 
@@ -151,7 +108,7 @@ Use ts-rest's built-in validation for automatic checking.
 6. Rate limiting and concurrency
 
 **Phase 3: Polish**
-7. TUI component tests (full coverage)
+7. Web component tests (full coverage)
 8. Performance tests (load testing, query optimization)
 9. E2E tests (full user journeys)
 
@@ -168,7 +125,7 @@ Use ts-rest's built-in validation for automatic checking.
 ### Benchmarks
 
 - Collection endpoint response time (target: < 500ms)
-- TUI render performance (target: < 50ms for keypress response)
+- Web frontend render performance (target: < 100ms for interactions)
 - Database queries (identify and optimize slow queries)
 
 ---
@@ -187,6 +144,6 @@ Use ts-rest's built-in validation for automatic checking.
 
 - See `auth-tests.md` for detailed auth test cases
 - See `collection-tests.md` for detailed collection test cases
-- Use Vitest for all testing (consistent across backend and TUI)
+- Use Vitest for all testing (consistent across backend and web frontend)
 - Mock external dependencies (database, time, random number generation)
 - Aim for fast unit tests (< 10ms each), slower integration tests (< 100ms), slow E2E tests (< 5s)

@@ -1,13 +1,13 @@
 {
-	"name": "bank-game",
-	"version": "0.1.0",
-	"private": true,
-	"packageManager": "pnpm@10.28.0",
-	"scripts": {
-		"dev": "pnpm -r --parallel dev",
-		"build": "pnpm -r build",
-		"type-check": "pnpm -r type-check",
-		"lint": "pnpm -r lint",
-		"format": "pnpm -r format"
-	}
+  "name": "bank-game",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.28.0",
+  "scripts": {
+    "dev": "pnpm -r --parallel dev",
+    "build": "pnpm -r build",
+    "type-check": "pnpm -r type-check",
+    "lint": "pnpm -r lint",
+    "format": "pnpm -r format"
+  }
 }
