@@ -1,6 +1,9 @@
 // Game epoch - all banks share this calendar
 export const GAME_EPOCH = new Date("2024-01-01T00:00:00.000Z");
 
+// Constants
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
 export interface QuarterBoundary {
   quarterEnd: Date;
   fiscalYear: number;
@@ -71,11 +74,6 @@ export function getQuartersCrossed(
   // Get the quarter end for the start date
   let currentQuarterEnd = getQuarterEnd(start);
 
-  // If we're already past the first quarter end, start from the next quarter
-  if (start > currentQuarterEnd) {
-    currentQuarterEnd = getQuarterEnd(new Date(currentQuarterEnd.getTime() + 86400000)); // +1 day
-  }
-
   // Collect all quarter ends between start and end
   while (currentQuarterEnd <= end) {
     quarters.push({
@@ -85,7 +83,7 @@ export function getQuartersCrossed(
     });
 
     // Move to next quarter (add 1 day to current quarter end, then get that quarter's end)
-    const nextDay = new Date(currentQuarterEnd.getTime() + 86400000);
+    const nextDay = new Date(currentQuarterEnd.getTime() + ONE_DAY_MS);
     currentQuarterEnd = getQuarterEnd(nextDay);
   }
 

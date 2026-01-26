@@ -1,5 +1,8 @@
+import { Prisma } from "@prisma/client";
 import prisma from "../lib/db.js";
 import { convertSnapshotDecimals } from "../lib/prismaHelpers.js";
+
+const DEFAULT_SNAPSHOT_LIMIT = 100;
 
 interface GetSnapshotsFilters {
   year?: number;
@@ -24,8 +27,8 @@ export async function getQuarterlySnapshots(
     };
   }
 
-  // Build where clause
-  const where: any = { bankId };
+  // Build where clause with proper type safety
+  const where: Prisma.QuarterlySnapshotWhereInput = { bankId };
 
   if (filters?.year) {
     where.fiscalYear = filters.year;
@@ -39,7 +42,7 @@ export async function getQuarterlySnapshots(
   const snapshots = await prisma.quarterlySnapshot.findMany({
     where,
     orderBy: { quarterEnd: "desc" },
-    take: filters?.limit || 100,
+    take: filters?.limit || DEFAULT_SNAPSHOT_LIMIT,
   });
 
   // Convert Decimal fields to numbers

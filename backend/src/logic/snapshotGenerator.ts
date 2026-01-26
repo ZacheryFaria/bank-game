@@ -45,14 +45,7 @@ function buildRiskClassBreakdown(loanBuckets: LoanBucket[]): Record<string, numb
   return breakdown;
 }
 
-/**
- * Helper: Calculate loan loss reserve
- * Simplified: sum of all loan defaults in the period
- */
-function calculateLoanLossReserve(transactions: Transaction[]): number {
-  const defaults = transactions.filter(tx => tx.type === 'loan_default');
-  return sumTransactionAmounts(defaults);
-}
+const INITIAL_BANK_EQUITY = 200000;
 
 /**
  * Generate a quarterly snapshot for a bank.
@@ -83,24 +76,33 @@ export async function generateQuarterlySnapshot(
     },
   });
 
-  // 2. Group transactions by type
-  const txByType = {
-    loan_origination: transactions.filter(t => t.type === 'loan_origination'),
-    loan_repayment: transactions.filter(t => t.type === 'loan_repayment'),
-    interest_income: transactions.filter(t => t.type === 'interest_income'),
-    interest_expense: transactions.filter(t => t.type === 'interest_expense'),
-    loan_default: transactions.filter(t => t.type === 'loan_default'),
-    deposit_inflow: transactions.filter(t => t.type === 'deposit_inflow'),
-    deposit_outflow: transactions.filter(t => t.type === 'deposit_outflow'),
-    operating_expense: transactions.filter(t => t.type === 'operating_expense'),
+  // 2. Group transactions by type using a single pass for efficiency
+  const txByType = transactions.reduce((acc, t) => {
+    if (!acc[t.type]) {
+      acc[t.type] = [];
+    }
+    acc[t.type].push(t);
+    return acc;
+  }, {} as Record<string, Transaction[]>);
+
+  // Ensure all transaction types exist (empty arrays if none)
+  const groupedTx = {
+    loan_origination: txByType.loan_origination || [],
+    loan_repayment: txByType.loan_repayment || [],
+    interest_income: txByType.interest_income || [],
+    interest_expense: txByType.interest_expense || [],
+    loan_default: txByType.loan_default || [],
+    deposit_inflow: txByType.deposit_inflow || [],
+    deposit_outflow: txByType.deposit_outflow || [],
+    operating_expense: txByType.operating_expense || [],
   };
 
   // 3. Calculate income statement items
-  const interestIncome = sumTransactionAmounts(txByType.interest_income);
-  const interestExpense = sumTransactionAmounts(txByType.interest_expense);
+  const interestIncome = sumTransactionAmounts(groupedTx.interest_income);
+  const interestExpense = sumTransactionAmounts(groupedTx.interest_expense);
   const netInterestIncome = interestIncome - interestExpense;
-  const provisionForLosses = sumTransactionAmounts(txByType.loan_default);
-  const operatingExpenses = sumTransactionAmounts(txByType.operating_expense);
+  const provisionForLosses = sumTransactionAmounts(groupedTx.loan_default);
+  const operatingExpenses = sumTransactionAmounts(groupedTx.operating_expense);
   const netIncome = netInterestIncome - provisionForLosses - operatingExpenses;
 
   // 4. Query loan and deposit buckets at quarter end
@@ -133,29 +135,47 @@ export async function generateQuarterlySnapshot(
     0
   );
 
-  const loanLossReserve = calculateLoanLossReserve(txByType.loan_default);
+  // Reuse provision for losses calculation (already computed from loan_default transactions)
+  const loanLossReserve = provisionForLosses;
 
-  // Simplified: cash = deposits - loans
-  const cashAndReserves = Math.max(0, totalDeposits - totalLoans);
+  // Get opening equity from previous quarter or use initial bank equity
+  const previousSnapshot = await tx.quarterlySnapshot.findFirst({
+    where: {
+      bankId,
+      quarterEnd: { lt: quarterEnd },
+    },
+    orderBy: { quarterEnd: 'desc' },
+    select: { totalEquity: true },
+  });
 
-  const totalAssets = totalLoans + cashAndReserves;
+  const openingEquity = previousSnapshot
+    ? Number(previousSnapshot.totalEquity)
+    : INITIAL_BANK_EQUITY;
+
+  // Calculate closing equity: Opening Equity + Net Income
+  const totalEquity = openingEquity + netIncome;
+
+  // Use accounting equation: Assets = Liabilities + Equity
   const totalLiabilities = totalDeposits;
-  const totalEquity = totalAssets - totalLiabilities;
+  const totalAssets = totalLiabilities + totalEquity;
+
+  // Calculate cash as the balancing item: Cash = Total Assets - Loans - Loan Loss Reserve
+  const cashAndReserves = totalAssets - totalLoans - loanLossReserve;
 
   // 6. Calculate key ratios (guard against division by zero)
   const capitalRatio = totalAssets > 0 ? totalEquity / totalAssets : 0;
 
-  // Annualize quarterly values (divide by 0.25 = multiply by 4)
+  // Annualize quarterly values (multiply by 4)
   const netInterestMargin = totalAssets > 0
-    ? (netInterestIncome / totalAssets) / 0.25
+    ? (netInterestIncome / totalAssets) * 4
     : 0;
 
   const returnOnEquity = totalEquity > 0
-    ? (netIncome / totalEquity) / 0.25
+    ? (netIncome / totalEquity) * 4
     : 0;
 
   const defaultRate = totalLoans > 0
-    ? (provisionForLosses / totalLoans) / 0.25
+    ? (provisionForLosses / totalLoans) * 4
     : 0;
 
   // 7. Build portfolio breakdowns
@@ -163,6 +183,30 @@ export async function generateQuarterlySnapshot(
   const portfolioByRiskClass = buildRiskClassBreakdown(loanBuckets);
 
   // 8. Upsert snapshot record
+  const snapshotData = {
+    fiscalYear,
+    fiscalQuarter,
+    totalAssets,
+    totalLoans,
+    loanLossReserve,
+    cashAndReserves,
+    totalDeposits,
+    totalLiabilities,
+    totalEquity,
+    interestIncome,
+    interestExpense,
+    netInterestIncome,
+    provisionForLosses,
+    operatingExpenses,
+    netIncome,
+    capitalRatio,
+    netInterestMargin,
+    returnOnEquity,
+    defaultRate,
+    portfolioByProduct,
+    portfolioByRiskClass,
+  };
+
   const snapshot = await tx.quarterlySnapshot.upsert({
     where: {
       bankId_quarterEnd: {
@@ -170,53 +214,11 @@ export async function generateQuarterlySnapshot(
         quarterEnd,
       },
     },
-    update: {
-      fiscalYear,
-      fiscalQuarter,
-      totalAssets,
-      totalLoans,
-      loanLossReserve,
-      cashAndReserves,
-      totalDeposits,
-      totalLiabilities,
-      totalEquity,
-      interestIncome,
-      interestExpense,
-      netInterestIncome,
-      provisionForLosses,
-      operatingExpenses,
-      netIncome,
-      capitalRatio,
-      netInterestMargin,
-      returnOnEquity,
-      defaultRate,
-      portfolioByProduct,
-      portfolioByRiskClass,
-    },
+    update: snapshotData,
     create: {
       bankId,
       quarterEnd,
-      fiscalYear,
-      fiscalQuarter,
-      totalAssets,
-      totalLoans,
-      loanLossReserve,
-      cashAndReserves,
-      totalDeposits,
-      totalLiabilities,
-      totalEquity,
-      interestIncome,
-      interestExpense,
-      netInterestIncome,
-      provisionForLosses,
-      operatingExpenses,
-      netIncome,
-      capitalRatio,
-      netInterestMargin,
-      returnOnEquity,
-      defaultRate,
-      portfolioByProduct,
-      portfolioByRiskClass,
+      ...snapshotData,
     },
   });
 
