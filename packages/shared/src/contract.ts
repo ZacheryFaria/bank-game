@@ -1,4 +1,4 @@
-import { initContract, ContractNoBody, type ContractNoBodyType } from "@ts-rest/core";
+import { initContract } from "@ts-rest/core";
 import { z } from "zod";
 
 const c = initContract();
@@ -257,7 +257,7 @@ export const contract = c.router({
           retryAfter: z.number(),
         }),
       },
-      body: ContractNoBody as ContractNoBodyType,
+      body: z.object({}),
       summary: "Trigger collection (rate limited: 1/min)",
     },
   },
