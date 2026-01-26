@@ -199,7 +199,20 @@ export async function registerApiRoutes(fastify: FastifyInstance) {
     responseValidation: true,
   });
 
-  // Add middleware to bank routes
+  // Apply stricter rate limit to auth endpoints using onRoute hook
+  fastify.addHook("onRoute", (routeOptions) => {
+    if (routeOptions.url?.startsWith("/api/auth")) {
+      routeOptions.config = {
+        ...routeOptions.config,
+        rateLimit: {
+          max: 5,
+          timeWindow: '1 minute',
+        },
+      };
+    }
+  });
+
+  // Authentication middleware for bank endpoints
   fastify.addHook("preHandler", async (request, reply) => {
     if (request.url.startsWith("/api/bank")) {
       await authenticate(request, reply);

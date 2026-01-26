@@ -27,6 +27,7 @@
   "dependencies": {
     "@bank-game/shared": "workspace:*",
     "@fastify/cors": "^11.2.0",
+    "@fastify/rate-limit": "^10.3.0",
     "@prisma/client": "^6.19.2",
     "@ts-rest/core": "catalog:",
     "@ts-rest/fastify": "catalog:",

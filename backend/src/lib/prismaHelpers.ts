@@ -7,6 +7,20 @@ type PrismaBank = Bank & {
   depositBuckets?: any[];
 };
 
+/**
+ * Converts Prisma Decimal types to JavaScript numbers for API responses.
+ *
+ * Why we convert:
+ * - Prisma uses Decimal.js for precise decimal arithmetic in PostgreSQL
+ * - JSON responses need plain numbers for client consumption
+ * - Conversion happens at API boundary (after DB operations complete)
+ *
+ * Precision considerations:
+ * - Numbers can safely represent integers up to 2^53 - 1 (~9 quadrillion)
+ * - Financial amounts stored with 2 decimal places (18,2 precision in DB)
+ * - For amounts up to $90 trillion, precision loss is negligible
+ * - If amounts exceed this, consider using string representation
+ */
 export function convertBankDecimals(bank: PrismaBank | null): any {
   if (!bank) return null;
 
