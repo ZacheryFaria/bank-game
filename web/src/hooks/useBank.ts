@@ -1,14 +1,21 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api";
+import { useAuthStore } from "@/lib/store";
 import { toast } from "sonner";
 
 export function useBank() {
   const queryClient = useQueryClient();
+  const clearAuth = useAuthStore((state) => state.clearAuth);
 
   const bankQuery = useQuery({
     queryKey: ["bank"],
     queryFn: async () => {
       const response = await apiClient.bank.get();
+
+      if (response.status === 401) {
+        clearAuth();
+        throw new Error("Session expired");
+      }
 
       if (response.status !== 200) {
         const errorBody = response.body as { error?: string };

@@ -15,11 +15,12 @@ interface StatCardProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 const formatValue = (
-  value: number | string,
+  value: number | string | undefined | null,
   format: StatCardProps["format"],
   prefix?: string,
   suffix?: string
 ): string => {
+  if (value === undefined || value === null) return "—"
   if (typeof value === "string") return `${prefix || ""}${value}${suffix || ""}`
 
   let formatted: string
