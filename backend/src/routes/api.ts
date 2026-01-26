@@ -1,7 +1,6 @@
 import { initServer } from "@ts-rest/fastify";
 import { contract } from "@bank-game/shared";
 import type { FastifyInstance } from "fastify";
-import rateLimit from "@fastify/rate-limit";
 import { authenticate } from "../lib/authMiddleware.js";
 import * as authLogic from "../logic/auth.js";
 import * as bankLogic from "../logic/bank.js";
@@ -195,20 +194,22 @@ export const router = s.router(contract, {
 });
 
 export async function registerApiRoutes(fastify: FastifyInstance) {
-  // Register stricter rate limit for auth endpoints
-  await fastify.register(
-    async (authScope) => {
-      await authScope.register(rateLimit, {
-        max: 5,
-        timeWindow: '1 minute',
-      });
-    },
-    { prefix: '/api/auth' }
-  );
-
   await fastify.register(s.plugin(router), {
     logInitialization: false,
     responseValidation: true,
+  });
+
+  // Apply stricter rate limit to auth endpoints using onRoute hook
+  fastify.addHook("onRoute", (routeOptions) => {
+    if (routeOptions.url?.startsWith("/api/auth")) {
+      routeOptions.config = {
+        ...routeOptions.config,
+        rateLimit: {
+          max: 5,
+          timeWindow: '1 minute',
+        },
+      };
+    }
   });
 
   // Authentication middleware for bank endpoints

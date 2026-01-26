@@ -50,6 +50,7 @@ Based on user testing feedback (2026-01-23):
 - [ ] **Quarterly Snapshots** - Implement snapshot generation from transaction ledger
 - [ ] **Wrap Rate Upserts in Transaction** - Make rate updates atomic in `logic/bank.ts updateBankRates`
 - [ ] **Wrap Allocation Upserts in Transaction** - Make allocation updates atomic in `logic/bank.ts updateBankAllocation`
+- [ ] **Implement Time Multiplier** - Integrate `time.multiplier` config into CollectionSimulator's time calculations so it actually affects game speed. Currently defined in config but unused. See `backend/src/engine/CollectionSimulator.ts:63` and `docs/configuration.md`
 
 ### TUI
 

@@ -386,7 +386,7 @@ DB_POOL_MAX=10
 ```yaml
 # config.yml
 time:
-  multiplier: 4380         # 1 real hour = 15 game days
+  multiplier: 4380         # Currently unused - see Time Settings section
   maxIdleHours: 48         # Allow more idle time
 
 economy:
@@ -407,7 +407,7 @@ defaultRates:
 ```yaml
 # config.yml
 time:
-  multiplier: 2190         # 1 real hour = 7.5 game days
+  multiplier: 2190         # Currently unused - see Time Settings section
   maxIdleHours: 12         # Penalize idle time
 
 economy:
