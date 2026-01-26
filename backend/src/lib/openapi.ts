@@ -34,22 +34,25 @@ export function createOpenApiSpec() {
       operationMapper: (operation, route) => {
         let tags: string[] = []
 
-        if (route.path.startsWith('/api/auth')) {
-          tags = ['Authentication']
-        } else if (
-          route.path === '/api/bank' ||
-          route.path.startsWith('/api/bank/')
-        ) {
-          tags = ['Player Bank']
-        } else if (route.path.startsWith('/api/banks')) {
-          tags = ['Leaderboard']
-        } else if (route.path.startsWith('/api/market')) {
-          tags = ['Market Data']
+        switch (true) {
+          case route.path.startsWith('/api/auth'):
+            tags = ['Authentication']
+            break
+          case route.path.startsWith('/api/bank') &&
+            !route.path.startsWith('/api/banks'):
+            tags = ['Player Bank']
+            break
+          case route.path.startsWith('/api/banks'):
+            tags = ['Leaderboard']
+            break
+          case route.path.startsWith('/api/market'):
+            tags = ['Market Data']
+            break
         }
 
         const requiresAuth =
-          route.path.startsWith('/api/bank') &&
-          !route.path.startsWith('/api/banks')
+          (route.metadata as { requiresAuth?: boolean } | undefined)
+            ?.requiresAuth === true
 
         return {
           ...operation,

@@ -3,6 +3,10 @@ import { z } from "zod";
 
 const c = initContract();
 
+type RouteMetadata = {
+  requiresAuth?: boolean;
+};
+
 const BankRateSchema = z.object({
   product: z.string(),
   rate: z.number(),
@@ -206,6 +210,7 @@ export const contract = c.router({
           error: z.string(),
         }),
       },
+      metadata: { requiresAuth: true } as RouteMetadata,
       summary: "Get your bank's current state",
     },
     updateRates: {
@@ -224,6 +229,7 @@ export const contract = c.router({
       body: z.object({
         rates: z.record(z.string(), z.number().min(0).max(0.5)),
       }),
+      metadata: { requiresAuth: true } as RouteMetadata,
       summary: "Update your bank's interest rates",
     },
     updateAllocation: {
@@ -242,6 +248,7 @@ export const contract = c.router({
       body: z.object({
         allocations: z.record(z.string(), z.number().min(0).max(1)),
       }),
+      metadata: { requiresAuth: true } as RouteMetadata,
       summary: "Update your bank's risk allocation",
     },
     collect: {
@@ -258,6 +265,7 @@ export const contract = c.router({
         }),
       },
       body: z.object({}),
+      metadata: { requiresAuth: true } as RouteMetadata,
       summary: "Trigger collection (rate limited: 1/min)",
     },
   },

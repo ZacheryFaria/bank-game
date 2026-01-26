@@ -26,8 +26,10 @@ export async function createServer(): Promise<FastifyInstance> {
 
   await fastify.register(rateLimit, {
     global: true,
-    max: 100,
-    timeWindow: '1 minute',
+    max: process.env.RATE_LIMIT_MAX
+      ? parseInt(process.env.RATE_LIMIT_MAX, 10)
+      : 100,
+    timeWindow: process.env.RATE_LIMIT_WINDOW || '1 minute',
     skipOnError: false,
   })
 
