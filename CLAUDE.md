@@ -70,6 +70,51 @@ pnpm type-check && pnpm lint
 
 ---
 
+## Database Schema Changes
+
+**⚠️ CRITICAL: When editing Prisma schema files, you MUST create a migration.**
+
+Editing `backend/prisma/schema.prisma` directly without creating a migration will cause database drift - where your schema file and actual database structure become out of sync. This has caused issues multiple times.
+
+**Correct workflow for schema changes:**
+
+```bash
+# 1. Edit backend/prisma/schema.prisma
+# 2. Create and apply migration
+cd backend
+pnpm prisma migrate dev --name describe_your_changes
+
+# 3. Verify migration was created
+ls -la prisma/migrations/
+```
+
+**What this does:**
+- Generates SQL migration file in `prisma/migrations/`
+- Applies changes to database
+- Updates Prisma Client types
+- Keeps schema and database in sync
+
+**Common mistakes to avoid:**
+- ❌ Editing schema.prisma and running `prisma generate` only
+- ❌ Editing schema.prisma and running `prisma db push` (only for prototyping)
+- ❌ Manually editing the database without updating schema
+- ✅ Edit schema.prisma → run `prisma migrate dev`
+
+**Fixing database drift:**
+If you encounter drift, check status first:
+```bash
+cd backend
+pnpm prisma migrate status
+```
+
+For development databases, reset is often cleanest:
+```bash
+cd backend
+pnpm prisma migrate reset  # Drops all data, recreates from schema
+```
+
+---
+
 ## Documentation Structure
 
 **ALL documentation lives in `/docs/` - never create docs elsewhere.**
