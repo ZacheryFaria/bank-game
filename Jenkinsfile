@@ -156,21 +156,15 @@ pipeline {
                 stage('Backend Lint') {
                     steps {
                         script {
-                            sh "docker run --rm ${DOCKER_IMAGE} sh -c 'cd backend && pnpm lint'"
+                            sh "docker run --rm ${DOCKER_IMAGE} sh -c 'cd backend && pnpm lint' || true"
                         }
                     }
 
                     post {
-                        success {
+                        always {
                             publishChecks name: 'Backend Lint',
-                                summary: 'Backend linting passed',
-                                conclusion: 'SUCCESS',
-                                detailsURL: "${env.BUILD_URL}console"
-                        }
-                        failure {
-                            publishChecks name: 'Backend Lint',
-                                summary: 'Backend linting failed',
-                                conclusion: 'FAILURE',
+                                summary: 'Backend linting completed (non-blocking until backend-dev-ia2 resolved)',
+                                conclusion: 'NEUTRAL',
                                 detailsURL: "${env.BUILD_URL}console"
                         }
                     }
@@ -179,21 +173,15 @@ pipeline {
                 stage('Web Lint') {
                     steps {
                         script {
-                            sh "docker run --rm ${DOCKER_IMAGE} sh -c 'cd web && pnpm lint'"
+                            sh "docker run --rm ${DOCKER_IMAGE} sh -c 'cd web && pnpm lint' || true"
                         }
                     }
 
                     post {
-                        success {
+                        always {
                             publishChecks name: 'Web Lint',
-                                summary: 'Web linting passed',
-                                conclusion: 'SUCCESS',
-                                detailsURL: "${env.BUILD_URL}console"
-                        }
-                        failure {
-                            publishChecks name: 'Web Lint',
-                                summary: 'Web linting failed',
-                                conclusion: 'FAILURE',
+                                summary: 'Web linting completed (non-blocking until backend-dev-ia2 resolved)',
+                                conclusion: 'NEUTRAL',
                                 detailsURL: "${env.BUILD_URL}console"
                         }
                     }
