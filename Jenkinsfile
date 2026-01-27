@@ -203,7 +203,7 @@ pipeline {
                                     cd web &&
                                     pnpm test &&
                                     mkdir -p /artifacts/web &&
-                                    cp -r test-results /artifacts/web/
+                                    (cp -r test-results /artifacts/web/ || true)
                                 '
                             """
                         }
@@ -268,7 +268,7 @@ pipeline {
                                     --network ${BUILD_TAG}-test-net \
                                     -e DATABASE_URL=postgresql://postgres:postgres@${BUILD_TAG}-test-db:5432/bank_game_test \
                                     -v \$(pwd)/artifacts:/artifacts \
-                                    ${DOCKER_IMAGE} sh -c 'cd backend && pnpm test && mkdir -p /artifacts/backend && cp -r test-results /artifacts/backend/'
+                                    ${DOCKER_IMAGE} sh -c 'cd backend && pnpm test && mkdir -p /artifacts/backend && (cp -r test-results /artifacts/backend/ || true)'
                             """
                         }
                     }
