@@ -3,6 +3,10 @@ import { apiClient } from "@/lib/api";
 import { useAuthStore } from "@/lib/store";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { UserSchema } from "@bank-game/shared";
+import { z } from "zod";
+
+type User = z.infer<typeof UserSchema>;
 
 export function useAuth() {
   const { setAuth, clearAuth, isAuthenticated, user } = useAuthStore();
@@ -20,12 +24,12 @@ export function useAuth() {
         throw new Error(errorBody.error || "Login failed");
       }
 
-      return response.body as { token: string; refreshToken: string; user: any };
+      return response.body as { token: string; refreshToken: string; user: User };
     },
     onSuccess: (data) => {
       setAuth(data.token, data.refreshToken, data.user);
       toast.success("Login successful");
-      navigate("/dashboard");
+      void navigate("/dashboard");
     },
     onError: (error: Error) => {
       toast.error(error.message || "Login failed");
@@ -47,7 +51,7 @@ export function useAuth() {
         throw new Error(errorBody.error || "Registration failed");
       }
 
-      return response.body as { token: string; refreshToken: string; user: any };
+      return response.body as { token: string; refreshToken: string; user: User };
     },
     onSuccess: (data) => {
       setAuth(data.token, data.refreshToken, data.user);

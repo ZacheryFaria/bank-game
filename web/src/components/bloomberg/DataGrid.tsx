@@ -1,9 +1,7 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
 
-interface DataGridProps extends React.HTMLAttributes<HTMLTableElement> {}
-
-const DataGrid = React.forwardRef<HTMLTableElement, DataGridProps>(
+const DataGrid = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableElement>>(
   ({ className, ...props }, ref) => (
     <table
       ref={ref}

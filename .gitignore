@@ -38,9 +38,6 @@ build/
 .direnv/
 result
 
-# Prisma
-backend/prisma/migrations/
-
 # Temporary files
 tmp.md
 

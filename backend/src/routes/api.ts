@@ -86,7 +86,9 @@ export const router = s.router(contract, {
       const skip = (Number(page) - 1) * Number(limit);
       const take = Number(limit);
 
-      let orderBy: any = { currentEquity: "desc" };
+      let orderBy:
+        | { currentEquity: "desc" }
+        | { currentLoans: "desc" } = { currentEquity: "desc" };
       if (sortBy === "loans") {
         orderBy = { currentLoans: "desc" };
       }
@@ -112,7 +114,7 @@ export const router = s.router(contract, {
       return {
         status: 200,
         body: {
-          banks: banks.map((b) => ({
+          banks: banks.map((b: typeof banks[number]) => ({
             ...b,
             currentEquity: Number(b.currentEquity),
             currentLoans: Number(b.currentLoans),
@@ -153,11 +155,11 @@ export const router = s.router(contract, {
           currentEquity: Number(bank.currentEquity),
           currentLoans: Number(bank.currentLoans),
           currentDeposits: Number(bank.currentDeposits),
-          rates: bank.rates?.map((r) => ({
+          rates: bank.rates?.map((r: typeof bank.rates[number]) => ({
             product: r.product,
             rate: Number(r.rate),
           })),
-          allocations: bank.allocations?.map((a) => ({
+          allocations: bank.allocations?.map((a: typeof bank.allocations[number]) => ({
             riskClass: a.riskClass,
             percentage: Number(a.percentage),
           })),

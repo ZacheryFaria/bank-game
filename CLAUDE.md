@@ -44,6 +44,16 @@ pnpm lint                    # Check linting
 pnpm format                  # Auto-format code
 ```
 
+**Auto-fix linting issues:**
+```bash
+# RECOMMENDED: Run eslint --fix to auto-fix issues before committing
+cd backend && pnpm lint:fix  # Auto-fix backend linting issues
+cd web && npx eslint . --fix # Auto-fix web linting issues
+
+# Or fix both at once
+cd backend && pnpm lint:fix && cd ../web && npx eslint . --fix
+```
+
 **Quick validation workflow:**
 ```bash
 # Before committing backend changes

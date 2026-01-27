@@ -17,14 +17,31 @@ function App() {
         <Routes>
           <Route
             path="/login"
-            element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />}
+            element={isAuthenticated ? <Navigate to="/dashboard/overview" replace /> : <Login />}
           />
           <Route
             path="/register"
-            element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Register />}
+            element={isAuthenticated ? <Navigate to="/dashboard/overview" replace /> : <Register />}
+          />
+          <Route path="/dashboard" element={<Navigate to="/dashboard/overview" replace />} />
+          <Route
+            path="/dashboard/overview"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
           />
           <Route
-            path="/dashboard"
+            path="/dashboard/rates"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/portfolio"
             element={
               <ProtectedRoute>
                 <Dashboard />
@@ -33,7 +50,7 @@ function App() {
           />
           <Route
             path="/"
-            element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />}
+            element={<Navigate to={isAuthenticated ? "/dashboard/overview" : "/login"} replace />}
           />
         </Routes>
       </BrowserRouter>
