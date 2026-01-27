@@ -60,6 +60,11 @@ const formatProduct = (product: string) => {
   return formatStringWithSeparator(product, ' ');
 };
 
+// Default rate thresholds for visual indicators
+const HIGH_DEFAULT_RATE_THRESHOLD = 5; // Rates above 5% show warning (red)
+const MEDIUM_DEFAULT_RATE_THRESHOLD = 2; // Rates 2-5% show caution (yellow)
+const LOW_DEFAULT_RATE_THRESHOLD = 1; // Rates at or below 1% show success (green)
+
 type ProductDistribution = {
   product: string;
   balance: number;
@@ -138,12 +143,16 @@ export function Dashboard() {
       return { productDistribution: [], riskDistribution: [] };
     }
 
+    // Track originalPrincipal to calculate default rates:
+    // defaultRate = (originalPrincipal - currentBalance) / originalPrincipal
     const byProduct = new Map<string, {
       balance: number;
       originalPrincipal: number;
       weightedRate: number;
     }>();
 
+    // Track originalPrincipal to calculate default rates:
+    // defaultRate = (originalPrincipal - currentBalance) / originalPrincipal
     const byRisk = new Map<string, {
       balance: number;
       originalPrincipal: number;
@@ -778,11 +787,11 @@ export function Dashboard() {
                                 </DataGridCell>
                                 <DataGridCell
                                   numeric
-                                  variant={item.defaultRate > 5 ? "negative" : item.defaultRate > 2 ? "muted" : "positive"}
+                                  variant={item.defaultRate > HIGH_DEFAULT_RATE_THRESHOLD ? "negative" : item.defaultRate > MEDIUM_DEFAULT_RATE_THRESHOLD ? "muted" : "positive"}
                                 >
                                   {formatPercent(item.defaultRate)}
-                                  {item.defaultRate > 5 && " ⚠"}
-                                  {item.defaultRate <= 1 && " ✓"}
+                                  {item.defaultRate > HIGH_DEFAULT_RATE_THRESHOLD && " ⚠"}
+                                  {item.defaultRate <= LOW_DEFAULT_RATE_THRESHOLD && " ✓"}
                                 </DataGridCell>
                               </DataGridRow>
                             ))}
@@ -869,11 +878,11 @@ export function Dashboard() {
                                 </DataGridCell>
                                 <DataGridCell
                                   numeric
-                                  variant={item.defaultRate > 5 ? "negative" : item.defaultRate > 2 ? "muted" : "positive"}
+                                  variant={item.defaultRate > HIGH_DEFAULT_RATE_THRESHOLD ? "negative" : item.defaultRate > MEDIUM_DEFAULT_RATE_THRESHOLD ? "muted" : "positive"}
                                 >
                                   {formatPercent(item.defaultRate)}
-                                  {item.defaultRate > 5 && " ⚠"}
-                                  {item.defaultRate <= 1 && " ✓"}
+                                  {item.defaultRate > HIGH_DEFAULT_RATE_THRESHOLD && " ⚠"}
+                                  {item.defaultRate <= LOW_DEFAULT_RATE_THRESHOLD && " ✓"}
                                 </DataGridCell>
                               </DataGridRow>
                             ))}
