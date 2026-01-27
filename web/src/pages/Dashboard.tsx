@@ -21,6 +21,34 @@ import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Building2, DollarSign, Clock, LogOut, PiggyBank, TrendingUp } from "lucide-react";
 
+const formatCurrency = (value: number) => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(value);
+};
+
+const formatPercent = (value: number) => {
+  return `${value.toFixed(2)}%`;
+};
+
+const formatStringWithSeparator = (str: string, separator: string) => {
+  return str
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(separator);
+};
+
+const formatRiskClass = (riskClass: string) => {
+  return formatStringWithSeparator(riskClass, '-');
+};
+
+const formatProduct = (product: string) => {
+  return formatStringWithSeparator(product, ' ');
+};
+
 type ProductDistribution = {
   product: string;
   balance: number;
@@ -47,9 +75,12 @@ export function Dashboard() {
   const [depositRate, setDepositRate] = useState<number[]>([2.5]);
   const [lendingRate, setLendingRate] = useState<number[]>([7.5]);
 
-  const productDistribution = useMemo<ProductDistribution[]>(() => {
+  const { productDistribution, riskDistribution } = useMemo<{
+    productDistribution: ProductDistribution[];
+    riskDistribution: RiskDistribution[];
+  }>(() => {
     if (!bank?.loanBuckets || bank.loanBuckets.length === 0) {
-      return [];
+      return { productDistribution: [], riskDistribution: [] };
     }
 
     const byProduct = new Map<string, {
@@ -59,39 +90,6 @@ export function Dashboard() {
       activeLoanCount: number;
     }>();
 
-    for (const bucket of bank.loanBuckets) {
-      const existing = byProduct.get(bucket.product) || {
-        balance: 0,
-        weightedRate: 0,
-        loanCount: 0,
-        activeLoanCount: 0,
-      };
-
-      byProduct.set(bucket.product, {
-        balance: existing.balance + bucket.currentBalance,
-        weightedRate: existing.weightedRate + (bucket.currentBalance * bucket.interestRate),
-        loanCount: existing.loanCount + bucket.loanCount,
-        activeLoanCount: existing.activeLoanCount + bucket.activeLoanCount,
-      });
-    }
-
-    const totalLoans = bank.currentLoans;
-
-    return Array.from(byProduct.entries()).map(([product, data]) => ({
-      product,
-      balance: data.balance,
-      percentage: totalLoans > 0 ? (data.balance / totalLoans) * 100 : 0,
-      avgRate: data.balance > 0 ? data.weightedRate / data.balance : 0,
-      loanCount: data.loanCount,
-      activeLoanCount: data.activeLoanCount,
-    })).sort((a, b) => b.balance - a.balance);
-  }, [bank]);
-
-  const riskDistribution = useMemo<RiskDistribution[]>(() => {
-    if (!bank?.loanBuckets || bank.loanBuckets.length === 0) {
-      return [];
-    }
-
     const byRisk = new Map<string, {
       balance: number;
       weightedRate: number;
@@ -100,7 +98,21 @@ export function Dashboard() {
     }>();
 
     for (const bucket of bank.loanBuckets) {
-      const existing = byRisk.get(bucket.riskClass) || {
+      const existingProduct = byProduct.get(bucket.product) || {
+        balance: 0,
+        weightedRate: 0,
+        loanCount: 0,
+        activeLoanCount: 0,
+      };
+
+      byProduct.set(bucket.product, {
+        balance: existingProduct.balance + bucket.currentBalance,
+        weightedRate: existingProduct.weightedRate + (bucket.currentBalance * bucket.interestRate),
+        loanCount: existingProduct.loanCount + bucket.loanCount,
+        activeLoanCount: existingProduct.activeLoanCount + bucket.activeLoanCount,
+      });
+
+      const existingRisk = byRisk.get(bucket.riskClass) || {
         balance: 0,
         weightedRate: 0,
         loanCount: 0,
@@ -108,18 +120,27 @@ export function Dashboard() {
       };
 
       byRisk.set(bucket.riskClass, {
-        balance: existing.balance + bucket.currentBalance,
-        weightedRate: existing.weightedRate + (bucket.currentBalance * bucket.interestRate),
-        loanCount: existing.loanCount + bucket.loanCount,
-        activeLoanCount: existing.activeLoanCount + bucket.activeLoanCount,
+        balance: existingRisk.balance + bucket.currentBalance,
+        weightedRate: existingRisk.weightedRate + (bucket.currentBalance * bucket.interestRate),
+        loanCount: existingRisk.loanCount + bucket.loanCount,
+        activeLoanCount: existingRisk.activeLoanCount + bucket.activeLoanCount,
       });
     }
 
     const totalLoans = bank.currentLoans;
 
+    const productDist = Array.from(byProduct.entries()).map(([product, data]) => ({
+      product,
+      balance: data.balance,
+      percentage: totalLoans > 0 ? (data.balance / totalLoans) * 100 : 0,
+      avgRate: data.balance > 0 ? data.weightedRate / data.balance : 0,
+      loanCount: data.loanCount,
+      activeLoanCount: data.activeLoanCount,
+    })).sort((a, b) => b.balance - a.balance);
+
     const riskOrder = ['super_prime', 'prime', 'near_prime', 'subprime'];
 
-    return Array.from(byRisk.entries()).map(([riskClass, data]) => {
+    const riskDist = Array.from(byRisk.entries()).map(([riskClass, data]) => {
       const defaultCount = data.loanCount - data.activeLoanCount;
       const defaultRate = data.loanCount > 0 ? (defaultCount / data.loanCount) * 100 : 0;
 
@@ -133,36 +154,30 @@ export function Dashboard() {
         defaultRate,
       };
     }).sort((a, b) => {
-      return riskOrder.indexOf(a.riskClass) - riskOrder.indexOf(b.riskClass);
+      const aIndex = riskOrder.indexOf(a.riskClass);
+      const bIndex = riskOrder.indexOf(b.riskClass);
+      return (aIndex === -1 ? Infinity : aIndex) - (bIndex === -1 ? Infinity : bIndex);
     });
+
+    return { productDistribution: productDist, riskDistribution: riskDist };
   }, [bank]);
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
+  const productTotals = useMemo(() => {
+    return {
+      activeLoanCount: productDistribution.reduce((sum, item) => sum + item.activeLoanCount, 0),
+      loanCount: productDistribution.reduce((sum, item) => sum + item.loanCount, 0),
+    };
+  }, [productDistribution]);
 
-  const formatPercent = (value: number) => {
-    return `${value.toFixed(2)}%`;
-  };
-
-  const formatRiskClass = (riskClass: string) => {
-    return riskClass
-      .split('_')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join('-');
-  };
-
-  const formatProduct = (product: string) => {
-    return product
-      .split('_')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
-  };
+  const riskTotals = useMemo(() => {
+    const totalDefaults = riskDistribution.reduce((sum, item) => sum + (item.loanCount - item.activeLoanCount), 0);
+    const totalLoans = riskDistribution.reduce((sum, item) => sum + item.loanCount, 0);
+    return {
+      activeLoanCount: riskDistribution.reduce((sum, item) => sum + item.activeLoanCount, 0),
+      loanCount: totalLoans,
+      defaultRate: totalLoans > 0 ? (totalDefaults / totalLoans) * 100 : 0,
+    };
+  }, [riskDistribution]);
 
   if (isLoading) {
     return (
@@ -513,7 +528,7 @@ export function Dashboard() {
                               </DataGridCell>
                               <DataGridCell numeric>—</DataGridCell>
                               <DataGridCell numeric>
-                                {productDistribution.reduce((sum, item) => sum + item.activeLoanCount, 0)} / {productDistribution.reduce((sum, item) => sum + item.loanCount, 0)}
+                                {productTotals.activeLoanCount} / {productTotals.loanCount}
                               </DataGridCell>
                             </DataGridRow>
                           </DataGridBody>
@@ -608,14 +623,10 @@ export function Dashboard() {
                               </DataGridCell>
                               <DataGridCell numeric>—</DataGridCell>
                               <DataGridCell numeric>
-                                {(() => {
-                                  const totalDefaults = riskDistribution.reduce((sum, item) => sum + (item.loanCount - item.activeLoanCount), 0);
-                                  const totalLoans = riskDistribution.reduce((sum, item) => sum + item.loanCount, 0);
-                                  return formatPercent(totalLoans > 0 ? (totalDefaults / totalLoans) * 100 : 0);
-                                })()}
+                                {formatPercent(riskTotals.defaultRate)}
                               </DataGridCell>
                               <DataGridCell numeric>
-                                {riskDistribution.reduce((sum, item) => sum + item.activeLoanCount, 0)} / {riskDistribution.reduce((sum, item) => sum + item.loanCount, 0)}
+                                {riskTotals.activeLoanCount} / {riskTotals.loanCount}
                               </DataGridCell>
                             </DataGridRow>
                           </DataGridBody>
