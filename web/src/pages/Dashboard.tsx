@@ -65,6 +65,16 @@ const HIGH_DEFAULT_RATE_THRESHOLD = 5; // Rates above 5% show warning (red)
 const MEDIUM_DEFAULT_RATE_THRESHOLD = 2; // Rates 2-5% show caution (yellow)
 const LOW_DEFAULT_RATE_THRESHOLD = 1; // Rates at or below 1% show success (green)
 
+/**
+ * Calculate the default rate as a percentage
+ * Formula: (originalPrincipal - currentBalance) / originalPrincipal * 100
+ */
+const calculateDefaultRate = (originalPrincipal: number, currentBalance: number): number => {
+  return originalPrincipal > 0
+    ? ((originalPrincipal - currentBalance) / originalPrincipal) * 100
+    : 0;
+};
+
 type ProductDistribution = {
   product: string;
   balance: number;
@@ -188,30 +198,24 @@ export function Dashboard() {
     const totalLoans = bank.currentLoans;
 
     const productDist = Array.from(byProduct.entries()).map(([product, data]) => {
-      const defaultedAmount = data.originalPrincipal - data.balance;
-      const defaultRate = data.originalPrincipal > 0 ? (defaultedAmount / data.originalPrincipal) * 100 : 0;
-
       return {
         product,
         balance: data.balance,
         percentage: totalLoans > 0 ? (data.balance / totalLoans) * 100 : 0,
         avgRate: data.balance > 0 ? data.weightedRate / data.balance : 0,
-        defaultRate,
+        defaultRate: calculateDefaultRate(data.originalPrincipal, data.balance),
       };
     }).sort((a, b) => b.balance - a.balance);
 
     const riskOrder = ['super_prime', 'prime', 'near_prime', 'subprime'];
 
     const riskDist = Array.from(byRisk.entries()).map(([riskClass, data]) => {
-      const defaultedAmount = data.originalPrincipal - data.balance;
-      const defaultRate = data.originalPrincipal > 0 ? (defaultedAmount / data.originalPrincipal) * 100 : 0;
-
       return {
         riskClass,
         balance: data.balance,
         percentage: totalLoans > 0 ? (data.balance / totalLoans) * 100 : 0,
         avgRate: data.balance > 0 ? data.weightedRate / data.balance : 0,
-        defaultRate,
+        defaultRate: calculateDefaultRate(data.originalPrincipal, data.balance),
       };
     }).sort((a, b) => {
       const aIndex = riskOrder.indexOf(a.riskClass);
@@ -229,10 +233,9 @@ export function Dashboard() {
 
     const totalOriginal = bank.loanBuckets.reduce((sum, bucket) => sum + bucket.originalPrincipal, 0);
     const totalCurrent = bank.loanBuckets.reduce((sum, bucket) => sum + bucket.currentBalance, 0);
-    const defaultedAmount = totalOriginal - totalCurrent;
 
     return {
-      defaultRate: totalOriginal > 0 ? (defaultedAmount / totalOriginal) * 100 : 0,
+      defaultRate: calculateDefaultRate(totalOriginal, totalCurrent),
     };
   }, [bank?.loanBuckets]);
 
@@ -243,10 +246,9 @@ export function Dashboard() {
 
     const totalOriginal = bank.loanBuckets.reduce((sum, bucket) => sum + bucket.originalPrincipal, 0);
     const totalCurrent = bank.loanBuckets.reduce((sum, bucket) => sum + bucket.currentBalance, 0);
-    const defaultedAmount = totalOriginal - totalCurrent;
 
     return {
-      defaultRate: totalOriginal > 0 ? (defaultedAmount / totalOriginal) * 100 : 0,
+      defaultRate: calculateDefaultRate(totalOriginal, totalCurrent),
     };
   }, [bank?.loanBuckets]);
 
@@ -787,7 +789,7 @@ export function Dashboard() {
                                 </DataGridCell>
                                 <DataGridCell
                                   numeric
-                                  variant={item.defaultRate > HIGH_DEFAULT_RATE_THRESHOLD ? "negative" : item.defaultRate > MEDIUM_DEFAULT_RATE_THRESHOLD ? "muted" : "positive"}
+                                  variant={item.defaultRate > HIGH_DEFAULT_RATE_THRESHOLD ? "negative" : item.defaultRate >= MEDIUM_DEFAULT_RATE_THRESHOLD ? "warning" : "positive"}
                                 >
                                   {formatPercent(item.defaultRate)}
                                   {item.defaultRate > HIGH_DEFAULT_RATE_THRESHOLD && " ⚠"}
@@ -878,7 +880,7 @@ export function Dashboard() {
                                 </DataGridCell>
                                 <DataGridCell
                                   numeric
-                                  variant={item.defaultRate > HIGH_DEFAULT_RATE_THRESHOLD ? "negative" : item.defaultRate > MEDIUM_DEFAULT_RATE_THRESHOLD ? "muted" : "positive"}
+                                  variant={item.defaultRate > HIGH_DEFAULT_RATE_THRESHOLD ? "negative" : item.defaultRate >= MEDIUM_DEFAULT_RATE_THRESHOLD ? "warning" : "positive"}
                                 >
                                   {formatPercent(item.defaultRate)}
                                   {item.defaultRate > HIGH_DEFAULT_RATE_THRESHOLD && " ⚠"}
