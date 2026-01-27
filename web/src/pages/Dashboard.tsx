@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useMatch, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useBank } from "@/hooks/useBank";
 import { apiClient } from "@/lib/api";
@@ -78,6 +79,9 @@ type RiskDistribution = {
 export function Dashboard() {
   const { user, logout } = useAuth();
   const { bank, isLoading, collect, isCollecting, updateRates } = useBank();
+  const navigate = useNavigate();
+  const isRatesTab = useMatch('/dashboard/rates');
+  const isPortfolioTab = useMatch('/dashboard/portfolio');
 
   // Fetch market rates for reference
   const { data: marketData } = useQuery({
@@ -111,6 +115,12 @@ export function Dashboard() {
       setRates((prev) => ({ ...prev, ...bankRates }));
     }
   }, [bank?.rates]);
+
+  const activeTab = isPortfolioTab ? 'portfolio' : isRatesTab ? 'rates' : 'overview';
+
+  const handleTabChange = (value: string) => {
+    navigate(`/dashboard/${value}`);
+  };
 
   const { productDistribution, riskDistribution } = useMemo<{
     productDistribution: ProductDistribution[];
@@ -294,7 +304,7 @@ export function Dashboard() {
       </BloombergHeader>
 
       <BloombergMain>
-        <Tabs defaultValue="overview" className="h-full flex flex-col">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="h-full flex flex-col">
           <div className="border-b border-border bg-secondary px-2">
             <TabsList className="bg-transparent border-0 h-auto p-0">
               <TabsTrigger
