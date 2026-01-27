@@ -1,4 +1,5 @@
 import prisma from "../lib/db.js";
+import type { Prisma } from "@prisma/client";
 import { simulateCollection } from "../engine/CollectionSimulator.js";
 import { COLLECT_COOLDOWN_SECONDS } from "../engine/constants.js";
 import type { BankState, CollectionReport } from "../engine/types.js";
@@ -57,7 +58,7 @@ export async function updateBankRates(
   bankId: string,
   rates: Record<string, number>,
 ) {
-  const result = await prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     for (const [product, rate] of Object.entries(rates)) {
       await tx.bankRate.upsert({
         where: {
@@ -94,7 +95,7 @@ export async function updateBankAllocation(
     return { success: false as const, error: "Allocations must sum to 1.0" };
   }
 
-  const result = await prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     for (const [riskClass, percentage] of Object.entries(allocations)) {
       await tx.bankAllocation.upsert({
         where: {
@@ -316,11 +317,11 @@ export async function collectBank(bankId: string): Promise<CollectBankResult> {
     currentEquity: Number(bank.currentEquity),
     currentLoans: Number(bank.currentLoans),
     currentDeposits: Number(bank.currentDeposits),
-    rates: Object.fromEntries(bank.rates.map((r) => [r.product, Number(r.rate)])),
+    rates: Object.fromEntries(bank.rates.map((r: typeof bank.rates[number]) => [r.product, Number(r.rate)])),
     allocations: Object.fromEntries(
-      bank.allocations.map((a) => [a.riskClass, Number(a.percentage)]),
+      bank.allocations.map((a: typeof bank.allocations[number]) => [a.riskClass, Number(a.percentage)]),
     ),
-    loanBuckets: bank.loanBuckets.map((b) => ({
+    loanBuckets: bank.loanBuckets.map((b: typeof bank.loanBuckets[number]) => ({
       id: b.id,
       product: b.product as BankState["loanBuckets"][number]["product"],
       riskClass: b.riskClass as BankState["loanBuckets"][number]["riskClass"],
@@ -331,7 +332,7 @@ export async function collectBank(bankId: string): Promise<CollectBankResult> {
       loanCount: b.loanCount,
       activeLoanCount: b.activeLoanCount,
     })),
-    depositBuckets: bank.depositBuckets.map((b) => ({
+    depositBuckets: bank.depositBuckets.map((b: typeof bank.depositBuckets[number]) => ({
       id: b.id,
       product: b.product as BankState["depositBuckets"][number]["product"],
       originationHour: b.originationHour,
@@ -345,7 +346,7 @@ export async function collectBank(bankId: string): Promise<CollectBankResult> {
   const report = simulateCollection(bankState, now);
 
   try {
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const cooldownThreshold = new Date(
         now.getTime() - COLLECT_COOLDOWN_SECONDS * 1000,
       );

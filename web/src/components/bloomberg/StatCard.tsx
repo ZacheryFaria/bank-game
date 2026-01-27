@@ -35,7 +35,7 @@ const formatValue = (
     case "percent":
       formatted = value.toFixed(2)
       return `${prefix || ""}${formatted}${suffix || "%"}`
-    case "compact":
+    case "compact": {
       const absValue = Math.abs(value)
       const sign = value < 0 ? "-" : ""
       if (absValue >= 1e12) {
@@ -50,6 +50,7 @@ const formatValue = (
         formatted = value.toFixed(2)
       }
       return `${prefix || ""}${formatted}${suffix || ""}`
+    }
     default:
       formatted = value.toLocaleString(undefined, {
         minimumFractionDigits: 0,
