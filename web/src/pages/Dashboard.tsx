@@ -1,7 +1,9 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useMatch, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useBank } from "@/hooks/useBank";
+import { apiClient } from "@/lib/api";
 import {
   BloombergLayout,
   BloombergHeader,
@@ -20,7 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Building2, DollarSign, Clock, LogOut, PiggyBank, TrendingUp } from "lucide-react";
+import { Building2, DollarSign, Clock, LogOut, PiggyBank } from "lucide-react";
 import { BankRateSchema, BankAllocationSchema } from "@bank-game/shared";
 import { z } from "zod";
 
@@ -81,8 +83,38 @@ export function Dashboard() {
   const isRatesTab = useMatch('/dashboard/rates');
   const isPortfolioTab = useMatch('/dashboard/portfolio');
 
-  const [depositRate, setDepositRate] = useState<number[]>([2.5]);
-  const [lendingRate, setLendingRate] = useState<number[]>([7.5]);
+  // Fetch market rates for reference
+  const { data: marketData } = useQuery({
+    queryKey: ["market-rates"],
+    queryFn: async () => {
+      const response = await apiClient.market.getRates();
+      if (response.status !== 200) {
+        throw new Error("Failed to fetch market rates");
+      }
+      return response.body;
+    },
+  });
+
+  // Individual rate state for all 6 products (stored as percentages for UI)
+  const [rates, setRates] = useState({
+    mortgage: 6.0,
+    auto: 7.0,
+    personal: 12.0,
+    credit_card: 22.0,
+    savings: 2.5,
+    cd: 3.5,
+  });
+
+  // Initialize rates from bank data when available
+  useEffect(() => {
+    if (bank?.rates && bank.rates.length > 0) {
+      const bankRates: Record<string, number> = {};
+      for (const rate of bank.rates) {
+        bankRates[rate.product] = rate.rate * 100; // Convert to percentage
+      }
+      setRates((prev) => ({ ...prev, ...bankRates }));
+    }
+  }, [bank?.rates]);
 
   const activeTab = isPortfolioTab ? 'portfolio' : isRatesTab ? 'rates' : 'overview';
 
@@ -216,13 +248,19 @@ export function Dashboard() {
 
   const handleApplyRates = () => {
     updateRates({
-      savings: depositRate[0] / 100,
-      lending: lendingRate[0] / 100,
+      mortgage: rates.mortgage / 100,
+      auto: rates.auto / 100,
+      personal: rates.personal / 100,
+      credit_card: rates.credit_card / 100,
+      savings: rates.savings / 100,
+      cd: rates.cd / 100,
     });
   };
 
-  const nim = bank.currentLoans > 0 && lendingRate[0] > 0
-    ? ((lendingRate[0] - depositRate[0]) / lendingRate[0]) * 100
+  // Calculate average lending rate (simple average of 4 loan products)
+  const avgLendingRate = (rates.mortgage + rates.auto + rates.personal + rates.credit_card) / 4;
+  const nim = bank.currentLoans > 0 && avgLendingRate > 0
+    ? ((avgLendingRate - rates.savings) / avgLendingRate) * 100
     : 0;
 
   return (
@@ -392,25 +430,155 @@ export function Dashboard() {
 
           <TabsContent value="rates" className="flex-1 m-0 overflow-auto">
             <div className="p-4 space-y-6">
-              <Panel title="Interest Rate Controls" headerColor="blue">
+              <Panel title="Loan Product Rates" headerColor="blue">
                 <div className="space-y-6 p-2">
+                  {/* Mortgage */}
+                  <div>
+                    <div className="flex justify-between mb-2">
+                      <span className="text-bloomberg-cyan text-sm uppercase font-semibold">
+                        Mortgage
+                        {marketData?.rates.mortgage && (
+                          <span className="text-xs text-muted-foreground ml-2 normal-case">
+                            Market: {(marketData.rates.mortgage * 100).toFixed(2)}%
+                          </span>
+                        )}
+                      </span>
+                      <span className="text-xl font-bold font-mono tabular-nums">
+                        {rates.mortgage.toFixed(2)}%
+                      </span>
+                    </div>
+                    <Slider
+                      value={[rates.mortgage]}
+                      onValueChange={([v]) => setRates({ ...rates, mortgage: v })}
+                      min={1}
+                      max={15}
+                      step={0.25}
+                      className="[&_[role=slider]]:bg-bloomberg-cyan [&_[role=slider]]:border-0 [&_.slider-ghost]:bg-bloomberg-cyan"
+                    />
+                    <div className="flex justify-between text-xs text-muted-foreground mt-1 font-mono">
+                      <span>1%</span>
+                      <span>8%</span>
+                      <span>15%</span>
+                    </div>
+                  </div>
+
+                  {/* Auto */}
+                  <div>
+                    <div className="flex justify-between mb-2">
+                      <span className="text-bloomberg-cyan text-sm uppercase font-semibold">
+                        Auto Loan
+                        {marketData?.rates.auto && (
+                          <span className="text-xs text-muted-foreground ml-2 normal-case">
+                            Market: {(marketData.rates.auto * 100).toFixed(2)}%
+                          </span>
+                        )}
+                      </span>
+                      <span className="text-xl font-bold font-mono tabular-nums">
+                        {rates.auto.toFixed(2)}%
+                      </span>
+                    </div>
+                    <Slider
+                      value={[rates.auto]}
+                      onValueChange={([v]) => setRates({ ...rates, auto: v })}
+                      min={1}
+                      max={20}
+                      step={0.25}
+                      className="[&_[role=slider]]:bg-bloomberg-cyan [&_[role=slider]]:border-0 [&_.slider-ghost]:bg-bloomberg-cyan"
+                    />
+                    <div className="flex justify-between text-xs text-muted-foreground mt-1 font-mono">
+                      <span>1%</span>
+                      <span>10%</span>
+                      <span>20%</span>
+                    </div>
+                  </div>
+
+                  {/* Personal */}
+                  <div>
+                    <div className="flex justify-between mb-2">
+                      <span className="text-bloomberg-cyan text-sm uppercase font-semibold">
+                        Personal Loan
+                        {marketData?.rates.personal && (
+                          <span className="text-xs text-muted-foreground ml-2 normal-case">
+                            Market: {(marketData.rates.personal * 100).toFixed(2)}%
+                          </span>
+                        )}
+                      </span>
+                      <span className="text-xl font-bold font-mono tabular-nums">
+                        {rates.personal.toFixed(2)}%
+                      </span>
+                    </div>
+                    <Slider
+                      value={[rates.personal]}
+                      onValueChange={([v]) => setRates({ ...rates, personal: v })}
+                      min={5}
+                      max={30}
+                      step={0.25}
+                      className="[&_[role=slider]]:bg-bloomberg-cyan [&_[role=slider]]:border-0 [&_.slider-ghost]:bg-bloomberg-cyan"
+                    />
+                    <div className="flex justify-between text-xs text-muted-foreground mt-1 font-mono">
+                      <span>5%</span>
+                      <span>15%</span>
+                      <span>30%</span>
+                    </div>
+                  </div>
+
+                  {/* Credit Card */}
+                  <div>
+                    <div className="flex justify-between mb-2">
+                      <span className="text-bloomberg-cyan text-sm uppercase font-semibold">
+                        Credit Card
+                        {marketData?.rates.credit_card && (
+                          <span className="text-xs text-muted-foreground ml-2 normal-case">
+                            Market: {(marketData.rates.credit_card * 100).toFixed(2)}%
+                          </span>
+                        )}
+                      </span>
+                      <span className="text-xl font-bold font-mono tabular-nums">
+                        {rates.credit_card.toFixed(2)}%
+                      </span>
+                    </div>
+                    <Slider
+                      value={[rates.credit_card]}
+                      onValueChange={([v]) => setRates({ ...rates, credit_card: v })}
+                      min={10}
+                      max={40}
+                      step={0.25}
+                      className="[&_[role=slider]]:bg-bloomberg-cyan [&_[role=slider]]:border-0 [&_.slider-ghost]:bg-bloomberg-cyan"
+                    />
+                    <div className="flex justify-between text-xs text-muted-foreground mt-1 font-mono">
+                      <span>10%</span>
+                      <span>25%</span>
+                      <span>40%</span>
+                    </div>
+                  </div>
+                </div>
+              </Panel>
+
+              <Panel title="Deposit Product Rates" headerColor="green">
+                <div className="space-y-6 p-2">
+                  {/* Savings */}
                   <div>
                     <div className="flex justify-between mb-2">
                       <span className="text-bloomberg-cyan text-sm uppercase font-semibold">
                         <PiggyBank className="h-4 w-4 inline mr-2" />
-                        Deposit Rate
+                        Savings Account
+                        {marketData?.rates.savings && (
+                          <span className="text-xs text-muted-foreground ml-2 normal-case">
+                            Market: {(marketData.rates.savings * 100).toFixed(2)}%
+                          </span>
+                        )}
                       </span>
                       <span className="text-xl font-bold font-mono tabular-nums">
-                        {depositRate[0].toFixed(2)}%
+                        {rates.savings.toFixed(2)}%
                       </span>
                     </div>
                     <Slider
-                      value={depositRate}
-                      onValueChange={setDepositRate}
+                      value={[rates.savings]}
+                      onValueChange={([v]) => setRates({ ...rates, savings: v })}
                       min={0}
                       max={10}
                       step={0.25}
-                      className="[&_[role=slider]]:bg-bloomberg-cyan [&_[role=slider]]:border-0 [&_.slider-ghost]:bg-bloomberg-cyan"
+                      className="[&_[role=slider]]:bg-bloomberg-green [&_[role=slider]]:border-0 [&_.slider-ghost]:bg-bloomberg-green"
                     />
                     <div className="flex justify-between text-xs text-muted-foreground mt-1 font-mono">
                       <span>0%</span>
@@ -419,28 +587,33 @@ export function Dashboard() {
                     </div>
                   </div>
 
+                  {/* CD */}
                   <div>
                     <div className="flex justify-between mb-2">
                       <span className="text-bloomberg-cyan text-sm uppercase font-semibold">
-                        <TrendingUp className="h-4 w-4 inline mr-2" />
-                        Lending Rate
+                        Certificate of Deposit (CD)
+                        {marketData?.rates.cd && (
+                          <span className="text-xs text-muted-foreground ml-2 normal-case">
+                            Market: {(marketData.rates.cd * 100).toFixed(2)}%
+                          </span>
+                        )}
                       </span>
                       <span className="text-xl font-bold font-mono tabular-nums">
-                        {lendingRate[0].toFixed(2)}%
+                        {rates.cd.toFixed(2)}%
                       </span>
                     </div>
                     <Slider
-                      value={lendingRate}
-                      onValueChange={setLendingRate}
+                      value={[rates.cd]}
+                      onValueChange={([v]) => setRates({ ...rates, cd: v })}
                       min={0}
-                      max={20}
+                      max={10}
                       step={0.25}
-                      className="[&_[role=slider]]:bg-bloomberg-orange [&_[role=slider]]:border-0 [&_.slider-ghost]:bg-bloomberg-orange"
+                      className="[&_[role=slider]]:bg-bloomberg-green [&_[role=slider]]:border-0 [&_.slider-ghost]:bg-bloomberg-green"
                     />
                     <div className="flex justify-between text-xs text-muted-foreground mt-1 font-mono">
                       <span>0%</span>
+                      <span>5%</span>
                       <span>10%</span>
-                      <span>20%</span>
                     </div>
                   </div>
 
@@ -456,10 +629,22 @@ export function Dashboard() {
               <Panel title="Rate Impact Analysis" headerColor="amber">
                 <div className="grid grid-cols-2 gap-4">
                   <StatCard
-                    label="Interest Spread"
-                    value={lendingRate[0] - depositRate[0]}
+                    label="Avg Lending Rate"
+                    value={avgLendingRate}
                     format="percent"
-                    trend={lendingRate[0] - depositRate[0] > 3 ? "up" : "down"}
+                    size="sm"
+                  />
+                  <StatCard
+                    label="Savings Rate"
+                    value={rates.savings}
+                    format="percent"
+                    size="sm"
+                  />
+                  <StatCard
+                    label="Interest Spread"
+                    value={avgLendingRate - rates.savings}
+                    format="percent"
+                    trend={avgLendingRate - rates.savings > 3 ? "up" : "down"}
                     size="sm"
                   />
                   <StatCard
