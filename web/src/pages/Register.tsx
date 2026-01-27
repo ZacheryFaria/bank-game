@@ -3,17 +3,24 @@ import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { Building2 } from "lucide-react";
+import { toast } from "sonner";
 
 export function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [bankName, setBankName] = useState("");
   const { register, isRegistering } = useAuth();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (password !== confirmPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
     register({ email, password, bankName });
   };
 
@@ -66,9 +73,8 @@ export function Register() {
               <Label htmlFor="password" className="text-bloomberg-cyan uppercase text-xs">
                 Password
               </Label>
-              <Input
+              <PasswordInput
                 id="password"
-                type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -79,6 +85,21 @@ export function Register() {
               <p className="text-xs text-muted-foreground">
                 Minimum 8 characters
               </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword" className="text-bloomberg-cyan uppercase text-xs">
+                Confirm Password
+              </Label>
+              <PasswordInput
+                id="confirmPassword"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                minLength={8}
+                placeholder="••••••••"
+                className="bg-secondary border-border text-foreground"
+              />
             </div>
           </div>
 
