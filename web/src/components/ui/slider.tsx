@@ -10,23 +10,34 @@ const Slider = React.forwardRef<
   const [ghostPosition, setGhostPosition] = React.useState<number | null>(null)
   const trackRef = React.useRef<HTMLSpanElement>(null)
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!trackRef.current) return
-    const rect = trackRef.current.getBoundingClientRect()
-    const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
+  const handleMouseMove = React.useCallback(
+    (e: React.MouseEvent) => {
+      if (!trackRef.current) return
+      const rect = trackRef.current.getBoundingClientRect()
+      const range = max - min
 
-    // Convert percent to value, snap to step, convert back to percent
-    const rawValue = min + percent * (max - min)
-    const snappedValue = Math.round(rawValue / step) * step
-    const clampedValue = Math.max(min, Math.min(max, snappedValue))
-    const snappedPercent = ((clampedValue - min) / (max - min)) * 100
+      // Guard against invalid range/step/width
+      if (rect.width === 0 || range <= 0 || step <= 0) {
+        setGhostPosition(null)
+        return
+      }
 
-    setGhostPosition(snappedPercent)
-  }
+      const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
 
-  const handleMouseLeave = () => {
+      // Convert percent to value, snap to step, convert back to percent
+      const rawValue = min + percent * range
+      const snappedValue = Math.round(rawValue / step) * step
+      const clampedValue = Math.max(min, Math.min(max, snappedValue))
+      const snappedPercent = ((clampedValue - min) / range) * 100
+
+      setGhostPosition(snappedPercent)
+    },
+    [min, max, step]
+  )
+
+  const handleMouseLeave = React.useCallback(() => {
     setGhostPosition(null)
-  }
+  }, [])
 
   return (
     <SliderPrimitive.Root
