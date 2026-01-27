@@ -109,8 +109,8 @@ pnpm prisma migrate reset  # Drops all data, recreates from schema
 **ALL documentation lives in `/docs/` - never create docs elsewhere.**
 
 ### Work & Planning
-- **`docs/TODO.md`** - Current priorities, next steps, backlog (single source of truth for what to work on)
-- **`docs/BUGS.md`** - Known issues and tech debt
+
+**All work items, bugs, and tasks are tracked in beads.** Use `bd ready` to find available work, `bd list --all` to see all issues.
 
 ### Technical Reference
 - **`docs/architecture.md`** - Database schema, API endpoints, backend structure, collection flow
@@ -257,8 +257,6 @@ bank-game/
 │   └── shared/           # ts-rest contract + Zod schemas
 │
 ├── docs/                 # ALL documentation (see above)
-│   ├── TODO.md
-│   ├── BUGS.md
 │   ├── architecture.md
 │   ├── game-design.md
 │   ├── web-patterns.md
@@ -274,9 +272,14 @@ bank-game/
 
 ## What to Work On
 
-See `docs/TODO.md` for current priorities and backlog. Always check there first for what needs to be done.
+**All work is tracked in beads.** Use these commands to find work:
 
-For bugs and issues, see `docs/BUGS.md`.
+```bash
+bd ready              # Find available work
+bd list --priority 0  # High priority tasks
+bd list --type bug    # View all bugs
+bd show <id>          # View issue details
+```
 
 For game design questions, see `docs/game-design.md`.
 

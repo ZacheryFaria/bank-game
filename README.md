@@ -28,8 +28,8 @@ The project has implemented:
 - [Web Patterns](docs/web-patterns.md) - Web frontend implementation patterns
 - [Wireframes](docs/wireframes.md) - UI/UX wireframes
 - [Test Strategy](docs/tests/test-strategy.md) - Testing approach
-- [TODO](docs/TODO.md) - Current priorities
-- [BUGS](docs/BUGS.md) - Known issues
+
+**Work tracking:** All tasks and bugs are tracked in beads. Run `bd ready` to find work, or `bd list --all` to see all issues.
 
 ## Development Setup
 
@@ -101,4 +101,4 @@ bank-game/
 - [ ] Financial statements generation
 - [ ] Expanding test coverage for edge cases and error handling
 
-See [docs/TODO.md](docs/TODO.md) for detailed task list.
+Run `bd list --all` to see all tracked work items.
