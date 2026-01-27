@@ -15,9 +15,6 @@ catalogs:
     '@ts-rest/open-api':
       specifier: 3.53.0-rc.1
       version: 3.53.0-rc.1
-    '@ts-rest/react-query':
-      specifier: 3.53.0-rc.1
-      version: 3.53.0-rc.1
     typescript:
       specifier: 5.9.3
       version: 5.9.3
@@ -359,6 +356,9 @@ importers:
       eslint:
         specifier: ^9.39.1
         version: 9.39.2(jiti@2.6.1)
+      eslint-config-prettier:
+        specifier: ^10.1.8
+        version: 10.1.8(eslint@9.39.2(jiti@2.6.1))
       eslint-plugin-react-hooks:
         specifier: ^7.0.1
         version: 7.0.1(eslint@9.39.2(jiti@2.6.1))
