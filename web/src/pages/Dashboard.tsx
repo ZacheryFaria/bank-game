@@ -54,6 +54,9 @@ const formatRiskClass = (riskClass: string) => {
 };
 
 const formatProduct = (product: string) => {
+  if (product === 'cd') {
+    return 'CD';
+  }
   return formatStringWithSeparator(product, ' ');
 };
 
@@ -259,7 +262,7 @@ export function Dashboard() {
       });
     }
 
-    const totalDeposits = bank.currentDeposits;
+    const totalDeposits = Array.from(byProduct.values()).reduce((sum, p) => sum + p.balance, 0);
 
     return Array.from(byProduct.entries()).map(([product, data]) => ({
       product,
@@ -271,9 +274,11 @@ export function Dashboard() {
   }, [bank]);
 
   const depositTotals = useMemo(() => {
-    return {
-      bucketCount: depositDistribution.reduce((sum, item) => sum + item.bucketCount, 0),
-    };
+    return depositDistribution.reduce((acc, item) => {
+      acc.balance += item.balance;
+      acc.bucketCount += item.bucketCount;
+      return acc;
+    }, { balance: 0, bucketCount: 0 });
   }, [depositDistribution]);
 
   if (isLoading) {
@@ -919,7 +924,7 @@ export function Dashboard() {
 
               <TabsContent value="deposits" className="flex-1 m-0 overflow-auto">
                 <div className="p-4 space-y-4">
-                  <Panel title={`DEPOSITS — Total: ${formatCurrency(bank.currentDeposits)}`} headerColor="green">
+                  <Panel title={`DEPOSITS — Total: ${formatCurrency(depositTotals.balance)}`} headerColor="green">
                     {depositDistribution.length === 0 ? (
                       <div className="text-center py-8 text-muted-foreground">
                         No deposits in portfolio
@@ -961,7 +966,7 @@ export function Dashboard() {
                                 TOTAL
                               </DataGridCell>
                               <DataGridCell numeric className="font-bold">
-                                {formatCurrency(bank.currentDeposits)}
+                                {formatCurrency(depositTotals.balance)}
                               </DataGridCell>
                               <DataGridCell numeric className="font-bold">
                                 100.00%
