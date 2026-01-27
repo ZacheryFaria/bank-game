@@ -12,6 +12,10 @@ export default defineConfig({
     setupFiles: ["./src/__tests__/setup.ts"],
     include: ["src/**/*.test.ts"],
     fileParallelism: false,
+    reporters: ["default", "junit"],
+    outputFile: {
+      junit: "./test-results/junit.xml",
+    },
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],
