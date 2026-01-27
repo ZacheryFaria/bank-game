@@ -55,8 +55,6 @@ bd show <id>          # View issue details
 
 Run `bd list --all` to see all tracked work items.
 
-See `docs/TODO.md` for long-term ideas not yet prioritized.
-
 ---
 
 ## Archived Work
