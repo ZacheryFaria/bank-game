@@ -76,7 +76,9 @@ export function simulateCollection(
   let currentDeposits = bankState.currentDeposits
 
   // Game time tracking
+  // Truncate to hour for bucket grouping (buckets are grouped by hour)
   const gameTimeStart = new Date(lastCollected)
+  gameTimeStart.setMinutes(0, 0, 0) // Set minutes, seconds, milliseconds to 0
   const gameTimeEnd = new Date(
     gameTimeStart.getTime() + gameQuartersElapsed * 90 * 24 * 60 * 60 * 1000
   )
@@ -108,37 +110,67 @@ export function simulateCollection(
       )
 
       if (actualLoanAmount > 0) {
-        // Create a new loan bucket (or find existing for this hour)
-        const bucketId = `new-${product}-${riskClass}-${gameTimeStart.toISOString()}`
+        // Check if a bucket already exists for this product, risk class, and hour
+        const existingBucket = bankState.loanBuckets.find(
+          b => b.product === product &&
+          b.riskClass === riskClass &&
+          b.originationHour.getTime() === gameTimeStart.getTime()
+        )
+
         const loanCount = Math.max(
           1,
           Math.floor(actualLoanAmount / productConfig.avgLoanSize)
         )
 
-        const bucket: LoanBucketData = {
-          id: bucketId,
-          product,
-          riskClass: riskClass as RiskClass,
-          originationHour: gameTimeStart,
-          originalPrincipal: actualLoanAmount,
-          currentBalance: actualLoanAmount,
-          interestRate: bankState.rates[product] || 0,
-          loanCount,
-          activeLoanCount: loanCount,
+        if (existingBucket) {
+          // Update existing bucket
+          const updatedBucket: LoanBucketData = {
+            ...existingBucket,
+            originalPrincipal: existingBucket.originalPrincipal + actualLoanAmount,
+            currentBalance: existingBucket.currentBalance + actualLoanAmount,
+            loanCount: existingBucket.loanCount + loanCount,
+            activeLoanCount: existingBucket.activeLoanCount + loanCount,
+          }
+          updatedLoanBuckets.push(updatedBucket)
+          currentLoans += actualLoanAmount
+          totalLoansOriginated += actualLoanAmount
+
+          transactions.push({
+            type: 'loan_origination',
+            amount: -actualLoanAmount, // Negative = outflow
+            timestamp: gameTimeStart,
+            loanBucketId: existingBucket.id,
+            details: { product, riskClass },
+          })
+        } else {
+          // Create new bucket
+          const bucketId = `new-${product}-${riskClass}-${gameTimeStart.toISOString()}`
+
+          const bucket: LoanBucketData = {
+            id: bucketId,
+            product,
+            riskClass: riskClass as RiskClass,
+            originationHour: gameTimeStart,
+            originalPrincipal: actualLoanAmount,
+            currentBalance: actualLoanAmount,
+            interestRate: bankState.rates[product] || 0,
+            loanCount,
+            activeLoanCount: loanCount,
+          }
+
+          newLoanBuckets.push(bucket)
+          currentLoans += actualLoanAmount
+          totalLoansOriginated += actualLoanAmount
+
+          // Record transaction
+          transactions.push({
+            type: 'loan_origination',
+            amount: -actualLoanAmount, // Negative = outflow
+            timestamp: gameTimeStart,
+            loanBucketId: bucketId,
+            details: { product, riskClass },
+          })
         }
-
-        newLoanBuckets.push(bucket)
-        currentLoans += actualLoanAmount
-        totalLoansOriginated += actualLoanAmount
-
-        // Record transaction
-        transactions.push({
-          type: 'loan_origination',
-          amount: -actualLoanAmount, // Negative = outflow
-          timestamp: gameTimeStart,
-          loanBucketId: bucketId,
-          details: { product, riskClass },
-        })
       }
     }
   }
@@ -149,27 +181,53 @@ export function simulateCollection(
     const totalInflowDollars = demand.hourlyDemand * gameQuartersElapsed
 
     if (totalInflowDollars > 0) {
-      const bucketId = `new-deposit-${product}-${gameTimeStart.toISOString()}`
+      // Check if a bucket already exists for this product and hour
+      const existingBucket = bankState.depositBuckets.find(
+        b => b.product === product &&
+        b.originationHour.getTime() === gameTimeStart.getTime()
+      )
 
-      const bucket: DepositBucketData = {
-        id: bucketId,
-        product,
-        originationHour: gameTimeStart,
-        originalAmount: totalInflowDollars,
-        currentBalance: totalInflowDollars,
-        interestRate: bankState.rates[product] || 0,
+      if (existingBucket) {
+        // Update existing bucket
+        const updatedBucket: DepositBucketData = {
+          ...existingBucket,
+          originalAmount: existingBucket.originalAmount + totalInflowDollars,
+          currentBalance: existingBucket.currentBalance + totalInflowDollars,
+        }
+        updatedDepositBuckets.push(updatedBucket)
+        currentDeposits += totalInflowDollars
+
+        transactions.push({
+          type: 'deposit_inflow',
+          amount: totalInflowDollars, // Positive = inflow
+          timestamp: gameTimeStart,
+          depositBucketId: existingBucket.id,
+          details: { product },
+        })
+      } else {
+        // Create new bucket
+        const bucketId = `new-deposit-${product}-${gameTimeStart.toISOString()}`
+
+        const bucket: DepositBucketData = {
+          id: bucketId,
+          product,
+          originationHour: gameTimeStart,
+          originalAmount: totalInflowDollars,
+          currentBalance: totalInflowDollars,
+          interestRate: bankState.rates[product] || 0,
+        }
+
+        newDepositBuckets.push(bucket)
+        currentDeposits += totalInflowDollars
+
+        transactions.push({
+          type: 'deposit_inflow',
+          amount: totalInflowDollars, // Positive = inflow
+          timestamp: gameTimeStart,
+          depositBucketId: bucketId,
+          details: { product },
+        })
       }
-
-      newDepositBuckets.push(bucket)
-      currentDeposits += totalInflowDollars
-
-      transactions.push({
-        type: 'deposit_inflow',
-        amount: totalInflowDollars, // Positive = inflow
-        timestamp: gameTimeStart,
-        depositBucketId: bucketId,
-        details: { product },
-      })
     }
   }
 
