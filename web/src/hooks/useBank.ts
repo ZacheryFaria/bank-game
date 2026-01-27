@@ -2,6 +2,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api";
 import { useAuthStore } from "@/lib/store";
 import { toast } from "sonner";
+import { BankSchema, CollectionReportSchema } from "@bank-game/shared";
+import { z } from "zod";
+
+type Bank = z.infer<typeof BankSchema>;
+type CollectionReport = z.infer<typeof CollectionReportSchema>;
 
 export function useBank() {
   const queryClient = useQueryClient();
@@ -22,11 +27,11 @@ export function useBank() {
         throw new Error(errorBody.error || "Failed to fetch bank");
       }
 
-      return response.body as any;
+      return response.body as Bank;
     },
   });
 
-  const collectMutation = useMutation({
+  const collectMutation = useMutation<CollectionReport, Error, void>({
     mutationFn: async () => {
       const response = await apiClient.bank.collect({
         body: {},
@@ -43,10 +48,12 @@ export function useBank() {
         throw new Error(errorBody.error || "Collection failed");
       }
 
-      return response.body as any;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+      return response.body as CollectionReport;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["bank"] });
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       toast.success(`Collected! Net Income: $${data.netIncome.toFixed(2)}`);
     },
     onError: (error: Error) => {
@@ -65,7 +72,7 @@ export function useBank() {
         throw new Error(errorBody.error || "Failed to update rates");
       }
 
-      return response.body as any;
+      return response.body as Bank;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bank"] });
@@ -87,7 +94,7 @@ export function useBank() {
         throw new Error(errorBody.error || "Failed to update allocation");
       }
 
-      return response.body as any;
+      return response.body as Bank;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bank"] });

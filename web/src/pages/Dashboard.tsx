@@ -14,6 +14,11 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Building2, DollarSign, Clock, LogOut, PiggyBank, TrendingUp } from "lucide-react";
+import { BankRateSchema, BankAllocationSchema } from "@bank-game/shared";
+import { z } from "zod";
+
+type BankRate = z.infer<typeof BankRateSchema>;
+type BankAllocation = z.infer<typeof BankAllocationSchema>;
 
 export function Dashboard() {
   const { user, logout } = useAuth();
@@ -171,7 +176,7 @@ export function Dashboard() {
 
                 <Panel title="Interest Rates" headerColor="amber">
                   <div className="space-y-1">
-                    {bank.rates?.map((rate: any) => (
+                    {bank.rates?.map((rate: BankRate) => (
                       <StatRow
                         key={rate.product}
                         label={rate.product}
@@ -198,7 +203,7 @@ export function Dashboard() {
 
                 <Panel title="Risk Allocation" headerColor="green">
                   <div className="space-y-1">
-                    {bank.allocations?.map((allocation: any) => (
+                    {bank.allocations?.map((allocation: BankAllocation) => (
                       <StatRow
                         key={allocation.riskClass}
                         label={allocation.riskClass}

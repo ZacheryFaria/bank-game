@@ -181,7 +181,7 @@ export const router = s.router(contract, {
     },
   },
   market: {
-    getRates: async () => {
+    getRates: () => {
       return {
         status: 200,
         body: {
