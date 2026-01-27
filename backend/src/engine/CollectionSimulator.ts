@@ -68,8 +68,11 @@ export function simulateCollection(
   const transactions: TransactionRecord[] = []
   const newLoanBuckets: LoanBucketData[] = []
   const newDepositBuckets: DepositBucketData[] = []
-  const updatedLoanBuckets: LoanBucketData[] = []
-  const updatedDepositBuckets: DepositBucketData[] = []
+
+  // Use maps to track bucket updates, keyed by bucket ID
+  // This prevents duplicate updates and ensures all changes are merged
+  const loanBucketUpdates = new Map<string, LoanBucketData>()
+  const depositBucketUpdates = new Map<string, DepositBucketData>()
 
   let currentEquity = bankState.currentEquity
   let currentLoans = bankState.currentLoans
@@ -122,29 +125,23 @@ export function simulateCollection(
           Math.floor(actualLoanAmount / productConfig.avgLoanSize)
         )
 
+        let bucketId: string
         if (existingBucket) {
-          // Update existing bucket
-          const updatedBucket: LoanBucketData = {
-            ...existingBucket,
-            originalPrincipal: existingBucket.originalPrincipal + actualLoanAmount,
-            currentBalance: existingBucket.currentBalance + actualLoanAmount,
-            loanCount: existingBucket.loanCount + loanCount,
-            activeLoanCount: existingBucket.activeLoanCount + loanCount,
-          }
-          updatedLoanBuckets.push(updatedBucket)
-          currentLoans += actualLoanAmount
-          totalLoansOriginated += actualLoanAmount
+          // Update existing bucket - merge with any prior updates in this collection
+          bucketId = existingBucket.id
+          const priorUpdate = loanBucketUpdates.get(bucketId) || existingBucket
 
-          transactions.push({
-            type: 'loan_origination',
-            amount: -actualLoanAmount, // Negative = outflow
-            timestamp: gameTimeStart,
-            loanBucketId: existingBucket.id,
-            details: { product, riskClass },
-          })
+          const updatedBucket: LoanBucketData = {
+            ...priorUpdate,
+            originalPrincipal: priorUpdate.originalPrincipal + actualLoanAmount,
+            currentBalance: priorUpdate.currentBalance + actualLoanAmount,
+            loanCount: priorUpdate.loanCount + loanCount,
+            activeLoanCount: priorUpdate.activeLoanCount + loanCount,
+          }
+          loanBucketUpdates.set(bucketId, updatedBucket)
         } else {
           // Create new bucket
-          const bucketId = `new-${product}-${riskClass}-${gameTimeStart.toISOString()}`
+          bucketId = `new-${product}-${riskClass}-${gameTimeStart.toISOString()}`
 
           const bucket: LoanBucketData = {
             id: bucketId,
@@ -159,18 +156,19 @@ export function simulateCollection(
           }
 
           newLoanBuckets.push(bucket)
-          currentLoans += actualLoanAmount
-          totalLoansOriginated += actualLoanAmount
-
-          // Record transaction
-          transactions.push({
-            type: 'loan_origination',
-            amount: -actualLoanAmount, // Negative = outflow
-            timestamp: gameTimeStart,
-            loanBucketId: bucketId,
-            details: { product, riskClass },
-          })
         }
+
+        // Common updates for both paths
+        currentLoans += actualLoanAmount
+        totalLoansOriginated += actualLoanAmount
+
+        transactions.push({
+          type: 'loan_origination',
+          amount: -actualLoanAmount, // Negative = outflow
+          timestamp: gameTimeStart,
+          loanBucketId: bucketId,
+          details: { product, riskClass },
+        })
       }
     }
   }
@@ -187,29 +185,24 @@ export function simulateCollection(
         b.originationHour.getTime() === gameTimeStart.getTime()
       )
 
+      let depositBucketId: string
       if (existingBucket) {
-        // Update existing bucket
-        const updatedBucket: DepositBucketData = {
-          ...existingBucket,
-          originalAmount: existingBucket.originalAmount + totalInflowDollars,
-          currentBalance: existingBucket.currentBalance + totalInflowDollars,
-        }
-        updatedDepositBuckets.push(updatedBucket)
-        currentDeposits += totalInflowDollars
+        // Update existing bucket - merge with any prior updates in this collection
+        depositBucketId = existingBucket.id
+        const priorUpdate = depositBucketUpdates.get(depositBucketId) || existingBucket
 
-        transactions.push({
-          type: 'deposit_inflow',
-          amount: totalInflowDollars, // Positive = inflow
-          timestamp: gameTimeStart,
-          depositBucketId: existingBucket.id,
-          details: { product },
-        })
+        const updatedBucket: DepositBucketData = {
+          ...priorUpdate,
+          originalAmount: priorUpdate.originalAmount + totalInflowDollars,
+          currentBalance: priorUpdate.currentBalance + totalInflowDollars,
+        }
+        depositBucketUpdates.set(depositBucketId, updatedBucket)
       } else {
         // Create new bucket
-        const bucketId = `new-deposit-${product}-${gameTimeStart.toISOString()}`
+        depositBucketId = `new-deposit-${product}-${gameTimeStart.toISOString()}`
 
         const bucket: DepositBucketData = {
-          id: bucketId,
+          id: depositBucketId,
           product,
           originationHour: gameTimeStart,
           originalAmount: totalInflowDollars,
@@ -218,16 +211,18 @@ export function simulateCollection(
         }
 
         newDepositBuckets.push(bucket)
-        currentDeposits += totalInflowDollars
-
-        transactions.push({
-          type: 'deposit_inflow',
-          amount: totalInflowDollars, // Positive = inflow
-          timestamp: gameTimeStart,
-          depositBucketId: bucketId,
-          details: { product },
-        })
       }
+
+      // Common updates for both paths
+      currentDeposits += totalInflowDollars
+
+      transactions.push({
+        type: 'deposit_inflow',
+        amount: totalInflowDollars, // Positive = inflow
+        timestamp: gameTimeStart,
+        depositBucketId: depositBucketId,
+        details: { product },
+      })
     }
   }
 
@@ -265,12 +260,15 @@ export function simulateCollection(
     const isNewBucket = newDepositBuckets.some(b => b.id === bucketId)
 
     if (isExistingBucket) {
-      const bucket = bankState.depositBuckets.find(b => b.id === bucketId)!
+      // Get the current state of the bucket (either from working map or original state)
+      const currentBucket = depositBucketUpdates.get(bucketId) ||
+        bankState.depositBuckets.find(b => b.id === bucketId)!
+
       const updatedBucket: DepositBucketData = {
-        ...bucket,
-        currentBalance: bucket.currentBalance + interest,
+        ...currentBucket,
+        currentBalance: currentBucket.currentBalance + interest,
       }
-      updatedDepositBuckets.push(updatedBucket)
+      depositBucketUpdates.set(bucketId, updatedBucket)
       currentDeposits += interest
     } else if (isNewBucket) {
       const bucket = newDepositBuckets.find(b => b.id === bucketId)!
@@ -296,13 +294,16 @@ export function simulateCollection(
       const isNewBucket = newLoanBuckets.some(b => b.id === bucketId)
 
       if (isExistingBucket) {
-        const bucket = bankState.loanBuckets.find(b => b.id === bucketId)!
+        // Get the current state of the bucket (either from working map or original state)
+        const currentBucket = loanBucketUpdates.get(bucketId) ||
+          bankState.loanBuckets.find(b => b.id === bucketId)!
+
         const updatedBucket: LoanBucketData = {
-          ...bucket,
+          ...currentBucket,
           currentBalance: update.currentBalance,
           activeLoanCount: update.activeLoanCount,
         }
-        updatedLoanBuckets.push(updatedBucket)
+        loanBucketUpdates.set(bucketId, updatedBucket)
       } else if (isNewBucket) {
         const bucket = newLoanBuckets.find(b => b.id === bucketId)!
         bucket.currentBalance = update.currentBalance
@@ -341,6 +342,10 @@ export function simulateCollection(
     interestResult.netInterestIncome - defaultResult.totalDefaults - periodOpex
 
   // 8. Build collection report
+  // Convert working maps to arrays for return
+  const updatedLoanBuckets = Array.from(loanBucketUpdates.values())
+  const updatedDepositBuckets = Array.from(depositBucketUpdates.values())
+
   const report: CollectionReport = {
     gameTimeStart,
     gameTimeEnd,
