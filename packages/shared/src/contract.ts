@@ -157,7 +157,7 @@ const MarketRatesSchema = z.object({
 });
 
 // Export schemas for reuse
-export { BankRateSchema, BankAllocationSchema, BankSchema, UserSchema, CollectionReportSchema };
+export { BankRateSchema, BankAllocationSchema, BankSchema, UserSchema, CollectionReportSchema, DepositBucketSchema };
 
 export const contract = c.router({
   auth: {
