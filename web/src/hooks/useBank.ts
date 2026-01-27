@@ -47,9 +47,7 @@ export function useBank() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["bank"] });
-      toast.success(
-        `Collected! Net Income: $${data.netIncome.toFixed(2)} (${data.gameQuartersElapsed} quarters)`
-      );
+      toast.success(`Collected! Net Income: $${data.netIncome.toFixed(2)}`);
     },
     onError: (error: Error) => {
       toast.error(error.message || "Collection failed");
