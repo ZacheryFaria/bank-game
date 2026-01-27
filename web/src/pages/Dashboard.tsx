@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useMatch, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useBank } from "@/hooks/useBank";
 import {
@@ -19,13 +19,13 @@ import { Building2, DollarSign, Clock, LogOut, PiggyBank, TrendingUp } from "luc
 export function Dashboard() {
   const { user, logout } = useAuth();
   const { bank, isLoading, collect, isCollecting, updateRates } = useBank();
-  const location = useLocation();
   const navigate = useNavigate();
+  const isRatesTab = useMatch('/dashboard/rates');
 
   const [depositRate, setDepositRate] = useState<number[]>([2.5]);
   const [lendingRate, setLendingRate] = useState<number[]>([7.5]);
 
-  const activeTab = location.pathname.includes('/rates') ? 'rates' : 'overview';
+  const activeTab = isRatesTab ? 'rates' : 'overview';
 
   const handleTabChange = (value: string) => {
     navigate(`/dashboard/${value}`);
