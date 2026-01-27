@@ -31,7 +31,7 @@
 - LoanBucket, DepositBucket for portfolio tracking
 - Transaction ledger with JSONB details
 - Collection records for game time tracking
-- Quarterly snapshot schema (generation not implemented)
+- Quarterly snapshot generation (implemented in snapshotGenerator.ts)
 
 **Testing:**
 - Vitest test infrastructure
@@ -41,63 +41,21 @@
 
 ---
 
-## High Priority
+## Work Tracking
 
-### Testing Expansion
-- [ ] Unit tests for engine functions (CollectionSimulator, DemandCalculator, InterestCalculator, DefaultRoller)
-- [ ] Integration tests for bank management endpoints (rates, allocations)
-- [ ] Collection flow tests with rate limiting verification
-- [ ] Leaderboard tests with pagination
+**All ongoing work and future features are now tracked in beads.**
 
-### Performance & Reliability
-- [ ] Monitor database query performance with new indexes
-- [ ] Add database connection pooling configuration
-- [ ] Implement structured logging (Pino or similar)
-- [ ] Add request ID tracking for debugging
+```bash
+bd ready              # Find available work
+bd list --priority 0  # View high priority items
+bd list --priority 1  # View medium priority items
+bd list --priority 2  # View low priority items
+bd show <id>          # View issue details
+```
 
----
+Run `bd list --all` to see all tracked work items.
 
-## Medium Priority
-
-### Features
-- [ ] Quarterly snapshot generation logic
-- [ ] Historical data queries (transaction history, collection history)
-- [ ] Bank deletion/reset functionality
-- [ ] Admin endpoints for system monitoring
-
-### Code Quality
-- [ ] Increase test coverage to 80%+
-- [ ] Add API endpoint documentation beyond TypeScript types
-- [ ] Standardize error response format across all endpoints
-- [ ] Add more comprehensive input validation
-
----
-
-## Low Priority / Future Enhancements
-
-### Security Hardening
-- [ ] HTTP-only cookie authentication (instead of Bearer tokens)
-- [ ] CSRF protection for cookie-based auth
-- [ ] Rate limiting per-user (not just per-IP)
-- [ ] Request payload size limits
-- [ ] SQL injection audit (Prisma provides protection, but verify)
-
-### Monitoring & Operations
-- [ ] Metrics endpoint (request counts, latencies, error rates)
-- [ ] Health check improvements (database connectivity verification)
-- [ ] Graceful shutdown handling
-- [ ] Database migration rollback procedures
-
-### Performance Optimization
-- [ ] Response caching for market data
-- [ ] Database query optimization based on production metrics
-- [ ] Bucket aggregation for old data (reduce query size)
-
-### Developer Experience
-- [ ] OpenAPI/Swagger documentation generation
-- [ ] Development seed data scripts
-- [ ] Load testing scripts
-- [ ] CI/CD pipeline setup
+See `docs/TODO.md` for long-term ideas not yet prioritized.
 
 ---
 
