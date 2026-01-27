@@ -90,7 +90,7 @@ export function simulateCollection(
   let totalLoansOriginated = 0
 
   for (const demand of loanDemands) {
-    const product = demand.product as LoanProduct
+    const product = demand.product
     const productConfig = LOAN_PRODUCTS[product]
     const totalDemandDollars = demand.hourlyDemand * gameQuartersElapsed
 
