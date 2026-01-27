@@ -9,7 +9,6 @@ import {
   RESERVE_REQUIREMENT,
   OPERATING_COST_RATE,
   LOAN_PRODUCTS,
-  type LoanProduct,
   type RiskClass,
 } from './constants.js'
 import {
