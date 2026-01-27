@@ -1,10 +1,17 @@
-import type { Bank, QuarterlySnapshot } from "@prisma/client";
+import type {
+  Bank,
+  QuarterlySnapshot,
+  BankRate,
+  BankAllocation,
+  LoanBucket,
+  DepositBucket,
+} from "@prisma/client";
 
 type PrismaBank = Bank & {
-  rates?: any[];
-  allocations?: any[];
-  loanBuckets?: any[];
-  depositBuckets?: any[];
+  rates?: BankRate[];
+  allocations?: BankAllocation[];
+  loanBuckets?: LoanBucket[];
+  depositBuckets?: DepositBucket[];
 };
 
 /**
@@ -21,6 +28,7 @@ type PrismaBank = Bank & {
  * - For amounts up to $90 trillion, precision loss is negligible
  * - If amounts exceed this, consider using string representation
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function convertBankDecimals(bank: PrismaBank | null): any {
   if (!bank) return null;
 
@@ -29,21 +37,21 @@ export function convertBankDecimals(bank: PrismaBank | null): any {
     currentEquity: Number(bank.currentEquity),
     currentLoans: Number(bank.currentLoans),
     currentDeposits: Number(bank.currentDeposits),
-    rates: bank.rates?.map((r) => ({
+    rates: bank.rates?.map((r: BankRate) => ({
       ...r,
       rate: Number(r.rate),
     })),
-    allocations: bank.allocations?.map((a) => ({
+    allocations: bank.allocations?.map((a: BankAllocation) => ({
       ...a,
       percentage: Number(a.percentage),
     })),
-    loanBuckets: bank.loanBuckets?.map((b) => ({
+    loanBuckets: bank.loanBuckets?.map((b: LoanBucket) => ({
       ...b,
       originalPrincipal: Number(b.originalPrincipal),
       currentBalance: Number(b.currentBalance),
       interestRate: Number(b.interestRate),
     })),
-    depositBuckets: bank.depositBuckets?.map((b) => ({
+    depositBuckets: bank.depositBuckets?.map((b: DepositBucket) => ({
       ...b,
       originalAmount: Number(b.originalAmount),
       currentBalance: Number(b.currentBalance),

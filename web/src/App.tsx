@@ -41,6 +41,14 @@ function App() {
             }
           />
           <Route
+            path="/dashboard/portfolio"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/"
             element={<Navigate to={isAuthenticated ? "/dashboard/overview" : "/login"} replace />}
           />
