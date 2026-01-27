@@ -66,7 +66,7 @@ DataGridHead.displayName = "DataGridHead"
 const DataGridCell = React.forwardRef<
   HTMLTableCellElement,
   React.TdHTMLAttributes<HTMLTableCellElement> & {
-    variant?: "default" | "positive" | "negative" | "muted" | "highlight"
+    variant?: "default" | "positive" | "negative" | "muted" | "highlight" | "warning"
     numeric?: boolean
   }
 >(({ className, variant = "default", numeric = false, ...props }, ref) => {
@@ -76,6 +76,7 @@ const DataGridCell = React.forwardRef<
     negative: "text-bloomberg-red",
     muted: "text-muted-foreground",
     highlight: "text-bloomberg-cyan",
+    warning: "text-bloomberg-yellow",
   }
 
   return (
