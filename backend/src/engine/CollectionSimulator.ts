@@ -9,7 +9,6 @@ import {
   RESERVE_REQUIREMENT,
   OPERATING_COST_RATE,
   LOAN_PRODUCTS,
-  type LoanProduct,
   type RiskClass,
 } from './constants.js'
 import {
@@ -90,7 +89,7 @@ export function simulateCollection(
   let totalLoansOriginated = 0
 
   for (const demand of loanDemands) {
-    const product = demand.product as LoanProduct
+    const product = demand.product
     const productConfig = LOAN_PRODUCTS[product]
     const totalDemandDollars = demand.hourlyDemand * gameQuartersElapsed
 
