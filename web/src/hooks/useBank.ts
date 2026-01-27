@@ -48,12 +48,10 @@ export function useBank() {
         throw new Error(errorBody.error || "Collection failed");
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
       return response.body as CollectionReport;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["bank"] });
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       toast.success(`Collected! Net Income: $${data.netIncome.toFixed(2)}`);
     },
     onError: (error: Error) => {
