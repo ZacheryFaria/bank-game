@@ -72,7 +72,7 @@ export function useBank() {
         throw new Error(errorBody.error || "Failed to update rates");
       }
 
-      return response.body as Bank;
+      return response.body as { success: boolean; rates: Array<{ product: string; rate: number }> };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bank"] });
@@ -94,7 +94,7 @@ export function useBank() {
         throw new Error(errorBody.error || "Failed to update allocation");
       }
 
-      return response.body as Bank;
+      return response.body as { success: boolean; allocations: Array<{ riskClass: string; percentage: number }> };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bank"] });
