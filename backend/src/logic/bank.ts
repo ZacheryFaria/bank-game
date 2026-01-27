@@ -40,9 +40,17 @@ export async function getBankById(bankId: string) {
       allocations: true,
       loanBuckets: {
         where: { currentBalance: { gt: 0 } },
+        orderBy: [
+          { product: "asc" },
+          { originationHour: "asc" },
+        ],
       },
       depositBuckets: {
         where: { currentBalance: { gt: 0 } },
+        orderBy: [
+          { product: "asc" },
+          { originationHour: "asc" },
+        ],
       },
     },
   });
