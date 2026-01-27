@@ -5,12 +5,10 @@ import {
   BloombergLayout,
   BloombergHeader,
   BloombergMain,
-  BloombergFooter,
   BloombergGrid,
   Panel,
   StatCard,
   StatRow,
-  FunctionKeyBar,
 } from "@/components/bloomberg";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -54,33 +52,6 @@ export function Dashboard() {
   const nim = bank.currentLoans > 0 && lendingRate[0] > 0
     ? ((lendingRate[0] - depositRate[0]) / lendingRate[0]) * 100
     : 0;
-
-  const functionKeys = [
-    {
-      keyLabel: "F1",
-      description: "Help",
-      variant: "orange" as const,
-      onClick: () => alert("Help coming soon")
-    },
-    {
-      keyLabel: "F5",
-      description: "Collect",
-      variant: "blue" as const,
-      onClick: handleCollect
-    },
-    {
-      keyLabel: "F8",
-      description: "Rates",
-      variant: "amber" as const,
-      onClick: handleApplyRates
-    },
-    {
-      keyLabel: "F10",
-      description: "Logout",
-      variant: "orange" as const,
-      onClick: logout
-    },
-  ];
 
   return (
     <BloombergLayout>
@@ -261,7 +232,7 @@ export function Dashboard() {
                       min={0}
                       max={10}
                       step={0.25}
-                      className="[&_[role=slider]]:bg-bloomberg-cyan [&_[role=slider]]:border-0"
+                      className="[&_[role=slider]]:bg-bloomberg-cyan [&_[role=slider]]:border-0 [&_.slider-ghost]:bg-bloomberg-cyan"
                     />
                     <div className="flex justify-between text-xs text-muted-foreground mt-1 font-mono">
                       <span>0%</span>
@@ -286,7 +257,7 @@ export function Dashboard() {
                       min={0}
                       max={20}
                       step={0.25}
-                      className="[&_[role=slider]]:bg-bloomberg-orange [&_[role=slider]]:border-0"
+                      className="[&_[role=slider]]:bg-bloomberg-orange [&_[role=slider]]:border-0 [&_.slider-ghost]:bg-bloomberg-orange"
                     />
                     <div className="flex justify-between text-xs text-muted-foreground mt-1 font-mono">
                       <span>0%</span>
@@ -325,10 +296,6 @@ export function Dashboard() {
           </TabsContent>
         </Tabs>
       </BloombergMain>
-
-      <BloombergFooter>
-        <FunctionKeyBar keys={functionKeys} />
-      </BloombergFooter>
     </BloombergLayout>
   );
 }
