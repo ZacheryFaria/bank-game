@@ -336,8 +336,8 @@ export function Dashboard() {
               <div className="grid grid-cols-4 gap-px bg-border">
                 <StatCard
                   label="Cash on Hand"
-                  value={currentCash}
-                  format="currency"
+                  value={Math.round(currentCash)}
+                  format="number"
                   prefix="$"
                 />
                 <StatCard
@@ -365,8 +365,9 @@ export function Dashboard() {
                   <div className="space-y-1">
                     <StatRow
                       label="Cash on Hand"
-                      value={currentCash}
-                      format="currency"
+                      value={Math.round(currentCash)}
+                      format="number"
+                      prefix="$"
                       variant={currentCash > 0 ? "positive" : "negative"}
                     />
                     <StatRow

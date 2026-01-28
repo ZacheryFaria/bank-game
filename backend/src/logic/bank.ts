@@ -305,9 +305,17 @@ export async function collectBank(bankId: string): Promise<CollectBankResult> {
       allocations: true,
       loanBuckets: {
         where: { currentBalance: { gt: 0 } },
+        orderBy: [
+          { product: "asc" },
+          { originationHour: "asc" },
+        ],
       },
       depositBuckets: {
         where: { currentBalance: { gt: 0 } },
+        orderBy: [
+          { product: "asc" },
+          { originationHour: "asc" },
+        ],
       },
     },
   });
