@@ -54,6 +54,9 @@ const formatRiskClass = (riskClass: string) => {
 };
 
 const formatProduct = (product: string) => {
+  if (product === 'cd') {
+    return 'CD';
+  }
   return formatStringWithSeparator(product, ' ');
 };
 
@@ -74,6 +77,14 @@ type RiskDistribution = {
   loanCount: number;
   activeLoanCount: number;
   defaultRate: number;
+};
+
+type DepositDistribution = {
+  product: string;
+  balance: number;
+  percentage: number;
+  avgRate: number;
+  bucketCount: number;
 };
 
 export function Dashboard() {
@@ -225,6 +236,50 @@ export function Dashboard() {
       defaultRate: totalLoans > 0 ? (totalDefaults / totalLoans) * 100 : 0,
     };
   }, [riskDistribution]);
+
+  const depositDistribution = useMemo<DepositDistribution[]>(() => {
+    if (!bank?.depositBuckets || bank.depositBuckets.length === 0) {
+      return [];
+    }
+
+    const byProduct = new Map<string, {
+      balance: number;
+      weightedRate: number;
+      bucketCount: number;
+    }>();
+
+    for (const bucket of bank.depositBuckets) {
+      const existing = byProduct.get(bucket.product) || {
+        balance: 0,
+        weightedRate: 0,
+        bucketCount: 0,
+      };
+
+      byProduct.set(bucket.product, {
+        balance: existing.balance + bucket.currentBalance,
+        weightedRate: existing.weightedRate + (bucket.currentBalance * bucket.interestRate),
+        bucketCount: existing.bucketCount + 1,
+      });
+    }
+
+    const totalDeposits = Array.from(byProduct.values()).reduce((sum, p) => sum + p.balance, 0);
+
+    return Array.from(byProduct.entries()).map(([product, data]) => ({
+      product,
+      balance: data.balance,
+      percentage: totalDeposits > 0 ? (data.balance / totalDeposits) * 100 : 0,
+      avgRate: data.balance > 0 ? data.weightedRate / data.balance : 0,
+      bucketCount: data.bucketCount,
+    })).sort((a, b) => b.balance - a.balance);
+  }, [bank]);
+
+  const depositTotals = useMemo(() => {
+    return depositDistribution.reduce((acc, item) => {
+      acc.balance += item.balance;
+      acc.bucketCount += item.bucketCount;
+      return acc;
+    }, { balance: 0, bucketCount: 0 });
+  }, [depositDistribution]);
 
   if (isLoading) {
     return (
@@ -690,6 +745,12 @@ export function Dashboard() {
                   >
                     By Risk Class
                   </TabsTrigger>
+                  <TabsTrigger
+                    value="deposits"
+                    className="data-[state=active]:bg-transparent data-[state=active]:text-bloomberg-amber data-[state=active]:border-b-2 data-[state=active]:border-bloomberg-amber rounded-none px-4 py-2 text-sm font-mono uppercase"
+                  >
+                    Deposits
+                  </TabsTrigger>
                 </TabsList>
               </div>
 
@@ -706,10 +767,10 @@ export function Dashboard() {
                           <DataGridHeader>
                             <tr>
                               <DataGridHead>Product</DataGridHead>
-                              <DataGridHead>Balance</DataGridHead>
-                              <DataGridHead>% Portfolio</DataGridHead>
-                              <DataGridHead>Avg Rate</DataGridHead>
-                              <DataGridHead>Loan Count</DataGridHead>
+                              <DataGridHead className="text-right">Balance</DataGridHead>
+                              <DataGridHead className="text-right">% Portfolio</DataGridHead>
+                              <DataGridHead className="text-right">Avg Rate</DataGridHead>
+                              <DataGridHead className="text-right">Loan Count</DataGridHead>
                             </tr>
                           </DataGridHeader>
                           <DataGridBody>
@@ -792,11 +853,11 @@ export function Dashboard() {
                           <DataGridHeader>
                             <tr>
                               <DataGridHead>Risk Class</DataGridHead>
-                              <DataGridHead>Balance</DataGridHead>
-                              <DataGridHead>% Portfolio</DataGridHead>
-                              <DataGridHead>Avg Rate</DataGridHead>
-                              <DataGridHead>Default Rate</DataGridHead>
-                              <DataGridHead>Loan Count</DataGridHead>
+                              <DataGridHead className="text-right">Balance</DataGridHead>
+                              <DataGridHead className="text-right">% Portfolio</DataGridHead>
+                              <DataGridHead className="text-right">Avg Rate</DataGridHead>
+                              <DataGridHead className="text-right">Default Rate</DataGridHead>
+                              <DataGridHead className="text-right">Loan Count</DataGridHead>
                             </tr>
                           </DataGridHeader>
                           <DataGridBody>
@@ -861,6 +922,92 @@ export function Dashboard() {
                                 <div className="flex-1 bg-secondary h-4 relative">
                                   <div
                                     className="h-full bg-bloomberg-amber"
+                                    style={{ width: `${item.percentage}%` }}
+                                  />
+                                </div>
+                                <div className="w-16 text-right text-sm font-mono tabular-nums">
+                                  {formatPercent(item.percentage)}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </Panel>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="deposits" className="flex-1 m-0 overflow-auto">
+                <div className="p-4 space-y-4">
+                  <Panel title={`DEPOSITS — Total: ${formatCurrency(depositTotals.balance)}`} headerColor="green">
+                    {depositDistribution.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        No deposits in portfolio
+                      </div>
+                    ) : (
+                      <>
+                        <DataGrid>
+                          <DataGridHeader>
+                            <tr>
+                              <DataGridHead>Product</DataGridHead>
+                              <DataGridHead className="text-right">Balance</DataGridHead>
+                              <DataGridHead className="text-right">% of Deposits</DataGridHead>
+                              <DataGridHead className="text-right">Avg Rate</DataGridHead>
+                              <DataGridHead className="text-right">Bucket Count</DataGridHead>
+                            </tr>
+                          </DataGridHeader>
+                          <DataGridBody>
+                            {depositDistribution.map((item) => (
+                              <DataGridRow key={item.product}>
+                                <DataGridCell variant="highlight">
+                                  {formatProduct(item.product)}
+                                </DataGridCell>
+                                <DataGridCell numeric>
+                                  {formatCurrency(item.balance)}
+                                </DataGridCell>
+                                <DataGridCell numeric>
+                                  {formatPercent(item.percentage)}
+                                </DataGridCell>
+                                <DataGridCell numeric>
+                                  {formatPercent(item.avgRate * 100)}
+                                </DataGridCell>
+                                <DataGridCell numeric>
+                                  {item.bucketCount}
+                                </DataGridCell>
+                              </DataGridRow>
+                            ))}
+                            <DataGridRow>
+                              <DataGridCell variant="highlight" className="font-bold">
+                                TOTAL
+                              </DataGridCell>
+                              <DataGridCell numeric className="font-bold">
+                                {formatCurrency(depositTotals.balance)}
+                              </DataGridCell>
+                              <DataGridCell numeric className="font-bold">
+                                100.00%
+                              </DataGridCell>
+                              <DataGridCell numeric>—</DataGridCell>
+                              <DataGridCell numeric>
+                                {depositTotals.bucketCount}
+                              </DataGridCell>
+                            </DataGridRow>
+                          </DataGridBody>
+                        </DataGrid>
+
+                        <div className="mt-6">
+                          <div className="text-xs uppercase text-bloomberg-green mb-2 font-bold">
+                            Deposit Composition
+                          </div>
+                          <div className="space-y-2">
+                            {depositDistribution.map((item) => (
+                              <div key={item.product} className="flex items-center gap-2">
+                                <div className="w-32 text-sm font-mono">
+                                  {formatProduct(item.product)}
+                                </div>
+                                <div className="flex-1 bg-secondary h-4 relative">
+                                  <div
+                                    className="h-full bg-bloomberg-green"
                                     style={{ width: `${item.percentage}%` }}
                                   />
                                 </div>
