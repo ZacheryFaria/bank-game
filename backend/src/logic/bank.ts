@@ -38,15 +38,15 @@ export async function getBankById(bankId: string) {
     include: {
       rates: true,
       allocations: true,
+      // Include all buckets, even zero-balance ones, to prevent duplicate creation
+      // Zero-balance buckets can still receive new originations in the same hour
       loanBuckets: {
-        where: { currentBalance: { gt: 0 } },
         orderBy: [
           { product: "asc" },
           { originationHour: "asc" },
         ],
       },
       depositBuckets: {
-        where: { currentBalance: { gt: 0 } },
         orderBy: [
           { product: "asc" },
           { originationHour: "asc" },
@@ -209,7 +209,9 @@ async function updateExistingLoanBuckets(tx: any, buckets: any[]) {
     await tx.loanBucket.update({
       where: { id: bucket.id },
       data: {
+        originalPrincipal: bucket.originalPrincipal,
         currentBalance: bucket.currentBalance,
+        loanCount: bucket.loanCount,
         activeLoanCount: bucket.activeLoanCount,
       },
     });
@@ -237,6 +239,7 @@ async function updateExistingDepositBuckets(tx: any, buckets: any[]) {
     await tx.depositBucket.update({
       where: { id: bucket.id },
       data: {
+        originalAmount: bucket.originalAmount,
         currentBalance: bucket.currentBalance,
       },
     });
@@ -303,15 +306,14 @@ export async function collectBank(bankId: string): Promise<CollectBankResult> {
     include: {
       rates: true,
       allocations: true,
+      // Include all buckets, even zero-balance ones, to prevent duplicate creation
       loanBuckets: {
-        where: { currentBalance: { gt: 0 } },
         orderBy: [
           { product: "asc" },
           { originationHour: "asc" },
         ],
       },
       depositBuckets: {
-        where: { currentBalance: { gt: 0 } },
         orderBy: [
           { product: "asc" },
           { originationHour: "asc" },

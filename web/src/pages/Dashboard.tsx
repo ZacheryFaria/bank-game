@@ -60,13 +60,27 @@ const formatProduct = (product: string) => {
   return formatStringWithSeparator(product, ' ');
 };
 
+// Default rate thresholds for visual indicators
+const HIGH_DEFAULT_RATE_THRESHOLD = 5; // Rates above 5% show warning (red)
+const MEDIUM_DEFAULT_RATE_THRESHOLD = 2; // Rates 2-5% show caution (yellow)
+const LOW_DEFAULT_RATE_THRESHOLD = 1; // Rates at or below 1% show success (green)
+
+/**
+ * Calculate the default rate as a percentage
+ * Formula: (originalPrincipal - currentBalance) / originalPrincipal * 100
+ */
+const calculateDefaultRate = (originalPrincipal: number, currentBalance: number): number => {
+  return originalPrincipal > 0
+    ? ((originalPrincipal - currentBalance) / originalPrincipal) * 100
+    : 0;
+};
+
 type ProductDistribution = {
   product: string;
   balance: number;
   percentage: number;
   avgRate: number;
-  loanCount: number;
-  activeLoanCount: number;
+  defaultRate: number;
 };
 
 type RiskDistribution = {
@@ -74,8 +88,6 @@ type RiskDistribution = {
   balance: number;
   percentage: number;
   avgRate: number;
-  loanCount: number;
-  activeLoanCount: number;
   defaultRate: number;
 };
 
@@ -141,75 +153,69 @@ export function Dashboard() {
       return { productDistribution: [], riskDistribution: [] };
     }
 
+    // Track originalPrincipal to calculate default rates:
+    // defaultRate = (originalPrincipal - currentBalance) / originalPrincipal
     const byProduct = new Map<string, {
       balance: number;
+      originalPrincipal: number;
       weightedRate: number;
-      loanCount: number;
-      activeLoanCount: number;
     }>();
 
+    // Track originalPrincipal to calculate default rates:
+    // defaultRate = (originalPrincipal - currentBalance) / originalPrincipal
     const byRisk = new Map<string, {
       balance: number;
+      originalPrincipal: number;
       weightedRate: number;
-      loanCount: number;
-      activeLoanCount: number;
     }>();
 
     for (const bucket of bank.loanBuckets) {
       const existingProduct = byProduct.get(bucket.product) || {
         balance: 0,
+        originalPrincipal: 0,
         weightedRate: 0,
-        loanCount: 0,
-        activeLoanCount: 0,
       };
 
       byProduct.set(bucket.product, {
         balance: existingProduct.balance + bucket.currentBalance,
+        originalPrincipal: existingProduct.originalPrincipal + bucket.originalPrincipal,
         weightedRate: existingProduct.weightedRate + (bucket.currentBalance * bucket.interestRate),
-        loanCount: existingProduct.loanCount + bucket.loanCount,
-        activeLoanCount: existingProduct.activeLoanCount + bucket.activeLoanCount,
       });
 
       const existingRisk = byRisk.get(bucket.riskClass) || {
         balance: 0,
+        originalPrincipal: 0,
         weightedRate: 0,
-        loanCount: 0,
-        activeLoanCount: 0,
       };
 
       byRisk.set(bucket.riskClass, {
         balance: existingRisk.balance + bucket.currentBalance,
+        originalPrincipal: existingRisk.originalPrincipal + bucket.originalPrincipal,
         weightedRate: existingRisk.weightedRate + (bucket.currentBalance * bucket.interestRate),
-        loanCount: existingRisk.loanCount + bucket.loanCount,
-        activeLoanCount: existingRisk.activeLoanCount + bucket.activeLoanCount,
       });
     }
 
     const totalLoans = bank.currentLoans;
 
-    const productDist = Array.from(byProduct.entries()).map(([product, data]) => ({
-      product,
-      balance: data.balance,
-      percentage: totalLoans > 0 ? (data.balance / totalLoans) * 100 : 0,
-      avgRate: data.balance > 0 ? data.weightedRate / data.balance : 0,
-      loanCount: data.loanCount,
-      activeLoanCount: data.activeLoanCount,
-    })).sort((a, b) => b.balance - a.balance);
+    const productDist = Array.from(byProduct.entries()).map(([product, data]) => {
+      return {
+        product,
+        balance: data.balance,
+        percentage: totalLoans > 0 ? (data.balance / totalLoans) * 100 : 0,
+        avgRate: data.balance > 0 ? data.weightedRate / data.balance : 0,
+        defaultRate: calculateDefaultRate(data.originalPrincipal, data.balance),
+      };
+    }).sort((a, b) => b.balance - a.balance);
 
     const riskOrder = ['super_prime', 'prime', 'near_prime', 'subprime'];
 
     const riskDist = Array.from(byRisk.entries()).map(([riskClass, data]) => {
-      const defaultCount = data.loanCount - data.activeLoanCount;
-      const defaultRate = data.loanCount > 0 ? (defaultCount / data.loanCount) * 100 : 0;
-
       return {
         riskClass,
         balance: data.balance,
         percentage: totalLoans > 0 ? (data.balance / totalLoans) * 100 : 0,
         avgRate: data.balance > 0 ? data.weightedRate / data.balance : 0,
-        loanCount: data.loanCount,
-        activeLoanCount: data.activeLoanCount,
-        defaultRate,
+        defaultRate: calculateDefaultRate(data.originalPrincipal, data.balance),
       };
     }).sort((a, b) => {
       const aIndex = riskOrder.indexOf(a.riskClass);
@@ -221,21 +227,30 @@ export function Dashboard() {
   }, [bank]);
 
   const productTotals = useMemo(() => {
+    if (!bank?.loanBuckets || bank.loanBuckets.length === 0) {
+      return { defaultRate: 0 };
+    }
+
+    const totalOriginal = bank.loanBuckets.reduce((sum, bucket) => sum + bucket.originalPrincipal, 0);
+    const totalCurrent = bank.loanBuckets.reduce((sum, bucket) => sum + bucket.currentBalance, 0);
+
     return {
-      activeLoanCount: productDistribution.reduce((sum, item) => sum + item.activeLoanCount, 0),
-      loanCount: productDistribution.reduce((sum, item) => sum + item.loanCount, 0),
+      defaultRate: calculateDefaultRate(totalOriginal, totalCurrent),
     };
-  }, [productDistribution]);
+  }, [bank?.loanBuckets]);
 
   const riskTotals = useMemo(() => {
-    const totalDefaults = riskDistribution.reduce((sum, item) => sum + (item.loanCount - item.activeLoanCount), 0);
-    const totalLoans = riskDistribution.reduce((sum, item) => sum + item.loanCount, 0);
+    if (!bank?.loanBuckets || bank.loanBuckets.length === 0) {
+      return { defaultRate: 0 };
+    }
+
+    const totalOriginal = bank.loanBuckets.reduce((sum, bucket) => sum + bucket.originalPrincipal, 0);
+    const totalCurrent = bank.loanBuckets.reduce((sum, bucket) => sum + bucket.currentBalance, 0);
+
     return {
-      activeLoanCount: riskDistribution.reduce((sum, item) => sum + item.activeLoanCount, 0),
-      loanCount: totalLoans,
-      defaultRate: totalLoans > 0 ? (totalDefaults / totalLoans) * 100 : 0,
+      defaultRate: calculateDefaultRate(totalOriginal, totalCurrent),
     };
-  }, [riskDistribution]);
+  }, [bank?.loanBuckets]);
 
   const depositDistribution = useMemo<DepositDistribution[]>(() => {
     if (!bank?.depositBuckets || bank.depositBuckets.length === 0) {
@@ -770,7 +785,7 @@ export function Dashboard() {
                               <DataGridHead className="text-right">Balance</DataGridHead>
                               <DataGridHead className="text-right">% Portfolio</DataGridHead>
                               <DataGridHead className="text-right">Avg Rate</DataGridHead>
-                              <DataGridHead className="text-right">Loan Count</DataGridHead>
+                              <DataGridHead className="text-right">Default Rate</DataGridHead>
                             </tr>
                           </DataGridHeader>
                           <DataGridBody>
@@ -788,8 +803,13 @@ export function Dashboard() {
                                 <DataGridCell numeric>
                                   {formatPercent(item.avgRate * 100)}
                                 </DataGridCell>
-                                <DataGridCell numeric>
-                                  {item.activeLoanCount} / {item.loanCount}
+                                <DataGridCell
+                                  numeric
+                                  variant={item.defaultRate > HIGH_DEFAULT_RATE_THRESHOLD ? "negative" : item.defaultRate >= MEDIUM_DEFAULT_RATE_THRESHOLD ? "warning" : "positive"}
+                                >
+                                  {formatPercent(item.defaultRate)}
+                                  {item.defaultRate > HIGH_DEFAULT_RATE_THRESHOLD && " ⚠"}
+                                  {item.defaultRate <= LOW_DEFAULT_RATE_THRESHOLD && " ✓"}
                                 </DataGridCell>
                               </DataGridRow>
                             ))}
@@ -804,8 +824,8 @@ export function Dashboard() {
                                 100.00%
                               </DataGridCell>
                               <DataGridCell numeric>—</DataGridCell>
-                              <DataGridCell numeric>
-                                {productTotals.activeLoanCount} / {productTotals.loanCount}
+                              <DataGridCell numeric className="font-bold">
+                                {formatPercent(productTotals.defaultRate)}
                               </DataGridCell>
                             </DataGridRow>
                           </DataGridBody>
@@ -857,7 +877,6 @@ export function Dashboard() {
                               <DataGridHead className="text-right">% Portfolio</DataGridHead>
                               <DataGridHead className="text-right">Avg Rate</DataGridHead>
                               <DataGridHead className="text-right">Default Rate</DataGridHead>
-                              <DataGridHead className="text-right">Loan Count</DataGridHead>
                             </tr>
                           </DataGridHeader>
                           <DataGridBody>
@@ -877,14 +896,11 @@ export function Dashboard() {
                                 </DataGridCell>
                                 <DataGridCell
                                   numeric
-                                  variant={item.defaultRate > 5 ? "negative" : item.defaultRate > 2 ? "muted" : "positive"}
+                                  variant={item.defaultRate > HIGH_DEFAULT_RATE_THRESHOLD ? "negative" : item.defaultRate >= MEDIUM_DEFAULT_RATE_THRESHOLD ? "warning" : "positive"}
                                 >
                                   {formatPercent(item.defaultRate)}
-                                  {item.defaultRate > 5 && " ⚠"}
-                                  {item.defaultRate <= 1 && " ✓"}
-                                </DataGridCell>
-                                <DataGridCell numeric>
-                                  {item.activeLoanCount} / {item.loanCount}
+                                  {item.defaultRate > HIGH_DEFAULT_RATE_THRESHOLD && " ⚠"}
+                                  {item.defaultRate <= LOW_DEFAULT_RATE_THRESHOLD && " ✓"}
                                 </DataGridCell>
                               </DataGridRow>
                             ))}
@@ -899,11 +915,8 @@ export function Dashboard() {
                                 100.00%
                               </DataGridCell>
                               <DataGridCell numeric>—</DataGridCell>
-                              <DataGridCell numeric>
+                              <DataGridCell numeric className="font-bold">
                                 {formatPercent(riskTotals.defaultRate)}
-                              </DataGridCell>
-                              <DataGridCell numeric>
-                                {riskTotals.activeLoanCount} / {riskTotals.loanCount}
                               </DataGridCell>
                             </DataGridRow>
                           </DataGridBody>
