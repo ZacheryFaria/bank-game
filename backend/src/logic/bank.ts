@@ -40,8 +40,18 @@ export async function getBankById(bankId: string) {
       allocations: true,
       // Include all buckets, even zero-balance ones, to prevent duplicate creation
       // Zero-balance buckets can still receive new originations in the same hour
-      loanBuckets: true,
-      depositBuckets: true,
+      loanBuckets: {
+        orderBy: [
+          { product: "asc" },
+          { originationHour: "asc" },
+        ],
+      },
+      depositBuckets: {
+        orderBy: [
+          { product: "asc" },
+          { originationHour: "asc" },
+        ],
+      },
     },
   });
 
@@ -296,11 +306,18 @@ export async function collectBank(bankId: string): Promise<CollectBankResult> {
     include: {
       rates: true,
       allocations: true,
+      // Include all buckets, even zero-balance ones, to prevent duplicate creation
       loanBuckets: {
-        where: { currentBalance: { gt: 0 } },
+        orderBy: [
+          { product: "asc" },
+          { originationHour: "asc" },
+        ],
       },
       depositBuckets: {
-        where: { currentBalance: { gt: 0 } },
+        orderBy: [
+          { product: "asc" },
+          { originationHour: "asc" },
+        ],
       },
     },
   });

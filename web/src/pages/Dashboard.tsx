@@ -312,6 +312,9 @@ export function Dashboard() {
     );
   }
 
+  // Calculate cash on hand: Cash = Equity + Deposits - Loans
+  const currentCash = bank.currentEquity + bank.currentDeposits - bank.currentLoans;
+
   const handleCollect = () => {
     collect();
   };
@@ -400,7 +403,13 @@ export function Dashboard() {
 
           <TabsContent value="overview" className="flex-1 m-0 overflow-auto">
             <div className="p-4 space-y-4">
-              <div className="grid grid-cols-3 gap-px bg-border">
+              <div className="grid grid-cols-4 gap-px bg-border">
+                <StatCard
+                  label="Cash on Hand"
+                  value={Math.round(currentCash)}
+                  format="number"
+                  prefix="$"
+                />
                 <StatCard
                   label="Current Equity"
                   value={bank.currentEquity}
@@ -424,6 +433,13 @@ export function Dashboard() {
               <BloombergGrid cols={2} gap="sm">
                 <Panel title="Financial Position" headerColor="cyan">
                   <div className="space-y-1">
+                    <StatRow
+                      label="Cash on Hand"
+                      value={Math.round(currentCash)}
+                      format="number"
+                      prefix="$"
+                      variant={currentCash > 0 ? "positive" : "negative"}
+                    />
                     <StatRow
                       label="Equity"
                       value={bank.currentEquity}
