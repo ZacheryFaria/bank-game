@@ -6,6 +6,7 @@ import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import { Login } from "@/pages/Login";
 import { Register } from "@/pages/Register";
 import { Dashboard } from "@/pages/Dashboard";
+import { DrawerTest } from "@/pages/DrawerTest";
 import { useAuthStore } from "@/lib/store";
 
 function App() {
@@ -48,6 +49,7 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route path="/test/drawer" element={<DrawerTest />} />
           <Route
             path="/"
             element={<Navigate to={isAuthenticated ? "/dashboard/overview" : "/login"} replace />}
