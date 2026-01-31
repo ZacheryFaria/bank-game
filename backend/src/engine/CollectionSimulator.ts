@@ -346,6 +346,26 @@ export function simulateCollection(
   const updatedLoanBuckets = Array.from(loanBucketUpdates.values())
   const updatedDepositBuckets = Array.from(depositBucketUpdates.values())
 
+  // Calculate ending balances from actual bucket data to prevent drift
+  // Include: (1) new buckets, (2) updated buckets, (3) unchanged buckets
+  const unchangedLoanBuckets = bankState.loanBuckets.filter(
+    b => !loanBucketUpdates.has(b.id)
+  )
+  const actualEndingLoans = [
+    ...newLoanBuckets,
+    ...updatedLoanBuckets,
+    ...unchangedLoanBuckets,
+  ].reduce((sum, b) => sum + b.currentBalance, 0)
+
+  const unchangedDepositBuckets = bankState.depositBuckets.filter(
+    b => !depositBucketUpdates.has(b.id)
+  )
+  const actualEndingDeposits = [
+    ...newDepositBuckets,
+    ...updatedDepositBuckets,
+    ...unchangedDepositBuckets,
+  ].reduce((sum, b) => sum + b.currentBalance, 0)
+
   const report: CollectionReport = {
     gameTimeStart,
     gameTimeEnd,
@@ -358,8 +378,8 @@ export function simulateCollection(
     operatingExpenses: periodOpex,
     netIncome,
     endingEquity: currentEquity,
-    endingLoans: currentLoans,
-    endingDeposits: currentDeposits,
+    endingLoans: actualEndingLoans,
+    endingDeposits: actualEndingDeposits,
     randomSeed,
     transactions,
     newLoanBuckets,

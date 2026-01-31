@@ -294,5 +294,129 @@ describe("Collection API Integration Tests", () => {
 
       expect(secondTotalDeposits).toBeGreaterThan(firstTotalDeposits);
     });
+
+    it("should calculate endingLoans from actual bucket balances, not denormalized currentLoans", async () => {
+      const userData = createTestUser();
+
+      const registerResponse = await server.inject({
+        method: "POST",
+        url: "/api/auth/register",
+        payload: userData,
+      });
+      const { token, user } = JSON.parse(registerResponse.body);
+
+      // Simulate a database inconsistency: set currentLoans to incorrect value
+      // This mimics the scenario where denormalized currentLoans drifted from actual bucket sum
+      await prisma.bank.update({
+        where: { id: user.bank.id },
+        data: {
+          lastCollectedAt: hoursAgo(1),
+          currentLoans: 999999, // Intentionally wrong value
+        },
+      });
+
+      // Get actual sum of loan bucket balances
+      const loanBuckets = await prisma.loanBucket.findMany({
+        where: { bankId: user.bank.id },
+      });
+      const actualLoanBalance = loanBuckets.reduce(
+        (sum, b) => sum + Number(b.currentBalance),
+        0
+      );
+
+      // Verify currentLoans is indeed wrong (different from bucket sum)
+      expect(actualLoanBalance).not.toBe(999999);
+
+      // Run collection
+      const response = await server.inject({
+        method: "POST",
+        url: "/api/bank/collect",
+        headers: createAuthHeader(token),
+        payload: {},
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.body);
+
+      // Get final bucket balances after collection
+      const finalBuckets = await prisma.loanBucket.findMany({
+        where: { bankId: user.bank.id },
+      });
+      const finalActualBalance = finalBuckets.reduce(
+        (sum, b) => sum + Number(b.currentBalance),
+        0
+      );
+
+      // endingLoans should match actual bucket sum, NOT the incorrect denormalized value
+      // Allow for small floating point differences
+      expect(Math.abs(body.endingLoans - finalActualBalance)).toBeLessThan(0.01);
+
+      // Verify the bank record was updated with correct value
+      const updatedBank = await prisma.bank.findUnique({
+        where: { id: user.bank.id },
+      });
+      expect(Math.abs(Number(updatedBank!.currentLoans) - finalActualBalance)).toBeLessThan(0.01);
+    });
+
+    it("should calculate endingDeposits from actual bucket balances, not denormalized currentDeposits", async () => {
+      const userData = createTestUser();
+
+      const registerResponse = await server.inject({
+        method: "POST",
+        url: "/api/auth/register",
+        payload: userData,
+      });
+      const { token, user } = JSON.parse(registerResponse.body);
+
+      // Simulate database inconsistency for deposits
+      await prisma.bank.update({
+        where: { id: user.bank.id },
+        data: {
+          lastCollectedAt: hoursAgo(1),
+          currentDeposits: 888888, // Intentionally wrong value
+        },
+      });
+
+      // Get actual sum of deposit bucket balances
+      const depositBuckets = await prisma.depositBucket.findMany({
+        where: { bankId: user.bank.id },
+      });
+      const actualDepositBalance = depositBuckets.reduce(
+        (sum, b) => sum + Number(b.currentBalance),
+        0
+      );
+
+      // Verify currentDeposits is wrong
+      expect(actualDepositBalance).not.toBe(888888);
+
+      // Run collection
+      const response = await server.inject({
+        method: "POST",
+        url: "/api/bank/collect",
+        headers: createAuthHeader(token),
+        payload: {},
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.body);
+
+      // Get final bucket balances
+      const finalBuckets = await prisma.depositBucket.findMany({
+        where: { bankId: user.bank.id },
+      });
+      const finalActualBalance = finalBuckets.reduce(
+        (sum, b) => sum + Number(b.currentBalance),
+        0
+      );
+
+      // endingDeposits should match actual bucket sum
+      expect(Math.abs(body.endingDeposits - finalActualBalance)).toBeLessThan(0.01);
+
+      // Verify the bank record was updated with correct value
+      const updatedBank = await prisma.bank.findUnique({
+        where: { id: user.bank.id },
+      });
+      expect(Math.abs(Number(updatedBank!.currentDeposits) - finalActualBalance)).toBeLessThan(0.01);
+    });
   });
 });
