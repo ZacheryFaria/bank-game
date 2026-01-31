@@ -23,3 +23,5 @@ export {
   SplitPane,
 } from "./BloombergLayout"
 export { MiniChart, BarChart } from "./MiniChart"
+export { DetailDrawer } from "./DetailDrawer"
+export type { DetailDrawerProps, Tab } from "./DetailDrawer"
