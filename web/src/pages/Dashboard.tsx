@@ -575,33 +575,17 @@ export function Dashboard() {
                       Deposits
                     </TabsTrigger>
                   </TabsList>
-                  <TabsContent value="equity" className="m-0">
-                    {isHistoryLoading ? (
-                      <div className="h-[120px] flex items-center justify-center text-muted-foreground text-sm font-mono">
-                        Loading...
-                      </div>
-                    ) : (
-                      <TimeSeriesChart data={chartData} color="green" height={120} />
-                    )}
-                  </TabsContent>
-                  <TabsContent value="loans" className="m-0">
-                    {isHistoryLoading ? (
-                      <div className="h-[120px] flex items-center justify-center text-muted-foreground text-sm font-mono">
-                        Loading...
-                      </div>
-                    ) : (
-                      <TimeSeriesChart data={chartData} color="cyan" height={120} />
-                    )}
-                  </TabsContent>
-                  <TabsContent value="deposits" className="m-0">
-                    {isHistoryLoading ? (
-                      <div className="h-[120px] flex items-center justify-center text-muted-foreground text-sm font-mono">
-                        Loading...
-                      </div>
-                    ) : (
-                      <TimeSeriesChart data={chartData} color="amber" height={120} />
-                    )}
-                  </TabsContent>
+                  {isHistoryLoading ? (
+                    <div className="h-[120px] flex items-center justify-center text-muted-foreground text-sm font-mono">
+                      Loading...
+                    </div>
+                  ) : (
+                    <TimeSeriesChart
+                      data={chartData}
+                      color={historyMetric === "equity" ? "green" : historyMetric === "loans" ? "cyan" : "amber"}
+                      height={120}
+                    />
+                  )}
                 </Tabs>
               </Panel>
             </div>

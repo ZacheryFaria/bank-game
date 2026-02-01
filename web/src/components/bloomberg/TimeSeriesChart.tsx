@@ -1,5 +1,6 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { chartColors, type ChartColor } from "./colors";
 
 interface DataPoint {
   timestamp: Date;
@@ -9,7 +10,7 @@ interface DataPoint {
 
 interface TimeSeriesChartProps extends React.HTMLAttributes<HTMLDivElement> {
   data: DataPoint[];
-  color?: "amber" | "green" | "red" | "blue" | "cyan";
+  color?: ChartColor;
   height?: number;
   showArea?: boolean;
   formatValue?: (value: number) => string;
@@ -56,29 +57,6 @@ const TimeSeriesChart = React.forwardRef<HTMLDivElement, TimeSeriesChartProps>(
       }
       return () => resizeObserver.disconnect();
     }, []);
-
-    const colors = {
-      amber: {
-        stroke: "hsl(var(--bloomberg-amber))",
-        fill: "hsl(var(--bloomberg-amber) / 0.2)",
-      },
-      green: {
-        stroke: "hsl(var(--bloomberg-green))",
-        fill: "hsl(var(--bloomberg-green) / 0.2)",
-      },
-      red: {
-        stroke: "hsl(var(--bloomberg-red))",
-        fill: "hsl(var(--bloomberg-red) / 0.2)",
-      },
-      blue: {
-        stroke: "hsl(var(--bloomberg-blue))",
-        fill: "hsl(var(--bloomberg-blue) / 0.2)",
-      },
-      cyan: {
-        stroke: "hsl(var(--bloomberg-cyan))",
-        fill: "hsl(var(--bloomberg-cyan) / 0.2)",
-      },
-    };
 
     if (data.length < 2) {
       return (
@@ -183,12 +161,12 @@ const TimeSeriesChart = React.forwardRef<HTMLDivElement, TimeSeriesChartProps>(
 
           {/* Chart area */}
           {showArea && (
-            <polygon points={areaPoints} fill={colors[color].fill} />
+            <polygon points={areaPoints} fill={chartColors[color].fill} />
           )}
           <polyline
             points={points}
             fill="none"
-            stroke={colors[color].stroke}
+            stroke={chartColors[color].stroke}
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -201,7 +179,7 @@ const TimeSeriesChart = React.forwardRef<HTMLDivElement, TimeSeriesChartProps>(
               data[i].label ||
               (formatLabel
                 ? formatLabel(data[i].timestamp, i, data.length)
-                : `Q${((i % 4) + 1)}`);
+                : data[i].timestamp.toLocaleDateString(undefined, { month: "short", day: "numeric" }));
             return (
               <text
                 key={i}
