@@ -108,11 +108,15 @@ export function calculateDefaults(
       // Calculate new balance and active loan count
       const newBalance = bucket.currentBalance - defaultAmount
       const defaultRate = defaultAmount / bucket.currentBalance
-      const loansDefaulted = Math.ceil(bucket.activeLoanCount * defaultRate)
-      const newActiveLoanCount = Math.max(
+      const loansDefaulted = Math.round(bucket.activeLoanCount * defaultRate)
+      let newActiveLoanCount = Math.max(
         0,
         bucket.activeLoanCount - loansDefaulted
       )
+      // Safeguard: keep at least 1 loan if balance remains positive
+      if (newBalance > 0 && newActiveLoanCount === 0) {
+        newActiveLoanCount = 1
+      }
 
       bucketUpdates.set(bucket.id, {
         currentBalance: Math.max(0, newBalance),

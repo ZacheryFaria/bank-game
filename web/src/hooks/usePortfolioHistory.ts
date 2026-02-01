@@ -14,7 +14,7 @@ export function usePortfolioHistory(options: UsePortfolioHistoryOptions = {}) {
     queryKey: ["portfolio-history", period, product, riskClass],
     queryFn: async () => {
       const response = await apiClient.bank.portfolioHistory({
-        query: { period, product, riskClass, granularity: "quarterly" },
+        query: { period, product, riskClass },
       });
       if (response.status !== 200) {
         throw new Error("Failed to fetch portfolio history");

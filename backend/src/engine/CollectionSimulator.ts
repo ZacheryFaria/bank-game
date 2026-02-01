@@ -122,7 +122,7 @@ export function simulateCollection(
 
         const loanCount = Math.max(
           1,
-          Math.floor(actualLoanAmount / productConfig.avgLoanSize)
+          Math.round(actualLoanAmount / productConfig.avgLoanSize)
         )
 
         let bucketId: string
