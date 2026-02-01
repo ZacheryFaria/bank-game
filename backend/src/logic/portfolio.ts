@@ -4,19 +4,24 @@ import { convertSnapshotDecimals } from "../lib/prismaHelpers.js";
 interface PortfolioHistoryFilters {
   product?: string;
   riskClass?: string;
-  depositProduct?: string;
   period?: string;
-  granularity?: string;
 }
 
-function getQuarterLimit(period: string): number {
+function getPeriodStartDate(period: string): Date | null {
+  const now = new Date();
   switch (period) {
-    case "7d": return 4;
-    case "30d": return 8;
-    case "90d": return 24;
-    case "1y": return 100;
-    case "all": return 1000;
-    default: return 8;
+    case "7d":
+      return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    case "30d":
+      return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    case "90d":
+      return new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+    case "1y":
+      return new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+    case "all":
+      return null;
+    default:
+      return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
   }
 }
 
@@ -33,12 +38,18 @@ export async function getPortfolioHistory(
     return { success: false as const, error: "Bank not found" };
   }
 
-  const limit = getQuarterLimit(filters?.period || "30d");
+  if (filters?.product && filters?.riskClass) {
+    return { success: false as const, error: "Cannot filter by both product and riskClass simultaneously" };
+  }
+
+  const periodStart = getPeriodStartDate(filters?.period || "30d");
 
   const snapshots = await prisma.quarterlySnapshot.findMany({
-    where: { bankId },
+    where: {
+      bankId,
+      ...(periodStart && { quarterEnd: { gte: periodStart } }),
+    },
     orderBy: { quarterEnd: "desc" },
-    take: limit,
   });
 
   // Reverse to chronological order for charting
@@ -50,8 +61,7 @@ export async function getPortfolioHistory(
     let balance = converted.totalLoans;
     if (filters?.product && converted.portfolioByProduct) {
       balance = converted.portfolioByProduct[filters.product] || 0;
-    }
-    if (filters?.riskClass && converted.portfolioByRiskClass) {
+    } else if (filters?.riskClass && converted.portfolioByRiskClass) {
       balance = converted.portfolioByRiskClass[filters.riskClass] || 0;
     }
 
@@ -74,10 +84,8 @@ export async function getPortfolioHistory(
     dataPoints,
     metadata: {
       period: filters?.period || "30d",
-      granularity: filters?.granularity || "quarterly",
       product: filters?.product,
       riskClass: filters?.riskClass,
-      depositProduct: filters?.depositProduct,
       totalDataPoints: dataPoints.length,
     },
   };

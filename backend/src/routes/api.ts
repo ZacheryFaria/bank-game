@@ -86,7 +86,8 @@ export const router = s.router(contract, {
       );
 
       if (!result.success) {
-        return { status: 404, body: { error: result.error } };
+        const status = result.error === "Bank not found" ? 404 : 400;
+        return { status, body: { error: result.error } };
       }
 
       return {
