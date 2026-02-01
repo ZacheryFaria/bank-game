@@ -10,6 +10,10 @@ const DEV_USERS = [
 ]
 
 async function main() {
+  if (process.env.NODE_ENV === 'production' && process.env.ALLOW_DB_SEED !== 'true') {
+    throw new Error('Refusing to run seed in production. Set ALLOW_DB_SEED=true to override.')
+  }
+
   console.log('Seeding development database...')
 
   for (const userData of DEV_USERS) {
