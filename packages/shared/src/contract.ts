@@ -135,6 +135,39 @@ const PaginationSchema = z.object({
   totalPages: z.number(),
 });
 
+const PortfolioHistoryPointSchema = z.object({
+  timestamp: z.coerce.date(),
+  fiscalYear: z.number(),
+  fiscalQuarter: z.number(),
+  balance: z.number(),
+  defaultRate: z.number(),
+  totalEquity: z.number(),
+  totalLoans: z.number(),
+  totalDeposits: z.number(),
+  portfolioByProduct: z.record(z.string(), z.number()),
+  portfolioByRiskClass: z.record(z.string(), z.number()),
+});
+
+const PortfolioHistoryQuerySchema = z.object({
+  product: z.string().optional(),
+  riskClass: z.string().optional(),
+  depositProduct: z.string().optional(),
+  period: z.enum(["7d", "30d", "90d", "1y", "all"]).default("30d"),
+  granularity: z.enum(["daily", "weekly", "monthly", "quarterly"]).default("quarterly"),
+});
+
+const PortfolioHistoryResponseSchema = z.object({
+  dataPoints: z.array(PortfolioHistoryPointSchema),
+  metadata: z.object({
+    period: z.string(),
+    granularity: z.string(),
+    product: z.string().optional(),
+    riskClass: z.string().optional(),
+    depositProduct: z.string().optional(),
+    totalDataPoints: z.number(),
+  }),
+});
+
 const LoanProductInfoSchema = z.object({
   product: z.string(),
   marketRate: z.number(),
@@ -294,6 +327,17 @@ export const contract = c.router({
       body: z.object({}),
       metadata: { requiresAuth: true } as RouteMetadata,
       summary: "Trigger collection (rate limited: 1/min)",
+    },
+    portfolioHistory: {
+      method: "GET",
+      path: "/api/bank/portfolio/history",
+      responses: {
+        200: PortfolioHistoryResponseSchema,
+        404: z.object({ error: z.string() }),
+      },
+      query: PortfolioHistoryQuerySchema,
+      metadata: { requiresAuth: true } as RouteMetadata,
+      summary: "Get historical portfolio data for charting",
     },
   },
   banks: {
