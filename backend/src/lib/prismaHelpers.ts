@@ -75,6 +75,9 @@ export function convertAllocationDecimals(allocations: any[]): any[] {
 }
 
 export function convertSnapshotDecimals(snapshot: QuarterlySnapshot): any {
+  const portfolioByProduct = snapshot.portfolioByProduct as Record<string, number> | null;
+  const portfolioByRiskClass = snapshot.portfolioByRiskClass as Record<string, number> | null;
+
   return {
     ...snapshot,
     totalAssets: Number(snapshot.totalAssets),
@@ -94,5 +97,7 @@ export function convertSnapshotDecimals(snapshot: QuarterlySnapshot): any {
     netInterestMargin: Number(snapshot.netInterestMargin),
     returnOnEquity: Number(snapshot.returnOnEquity),
     defaultRate: Number(snapshot.defaultRate),
+    portfolioByProduct: portfolioByProduct || {},
+    portfolioByRiskClass: portfolioByRiskClass || {},
   };
 }
