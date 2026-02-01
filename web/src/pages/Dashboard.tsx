@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMatch, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useBank } from "@/hooks/useBank";
+import { usePortfolioHistory } from "@/hooks/usePortfolioHistory";
 import { apiClient } from "@/lib/api";
 import {
   BloombergLayout,
@@ -18,6 +19,7 @@ import {
   DataGridRow,
   DataGridHead,
   DataGridCell,
+  TimeSeriesChart,
 } from "@/components/bloomberg";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -127,6 +129,11 @@ export function Dashboard() {
     savings: 2.5,
     cd: 3.5,
   });
+
+  // Portfolio history chart state
+  const [historyPeriod, setHistoryPeriod] = useState<"7d" | "30d" | "90d" | "1y" | "all">("30d");
+  const [historyMetric, setHistoryMetric] = useState<"equity" | "loans" | "deposits">("equity");
+  const { data: portfolioHistory, isLoading: isHistoryLoading } = usePortfolioHistory({ period: historyPeriod });
 
   // Initialize rates from bank data when available
   useEffect(() => {
@@ -295,6 +302,24 @@ export function Dashboard() {
       return acc;
     }, { balance: 0, bucketCount: 0 });
   }, [depositDistribution]);
+
+  const chartData = useMemo(() => {
+    if (!portfolioHistory?.dataPoints) return [];
+    return portfolioHistory.dataPoints.map((point) => {
+      const value =
+        historyMetric === "equity"
+          ? point.totalEquity
+          : historyMetric === "loans"
+            ? point.totalLoans
+            : point.totalDeposits;
+      const date = new Date(point.timestamp);
+      return {
+        timestamp: date,
+        value,
+        label: date.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+      };
+    });
+  }, [portfolioHistory, historyMetric]);
 
   if (isLoading) {
     return (
@@ -511,6 +536,74 @@ export function Dashboard() {
                   </div>
                 </Panel>
               </BloombergGrid>
+
+              <Panel
+                title="PORTFOLIO HISTORY"
+                headerColor="blue"
+                headerRight={
+                  <select
+                    value={historyPeriod}
+                    onChange={(e) => setHistoryPeriod(e.target.value as typeof historyPeriod)}
+                    className="bg-secondary text-foreground text-xs font-mono border border-border px-2 py-1 rounded"
+                  >
+                    <option value="7d">7 Days</option>
+                    <option value="30d">30 Days</option>
+                    <option value="90d">90 Days</option>
+                    <option value="1y">1 Year</option>
+                    <option value="all">All Time</option>
+                  </select>
+                }
+              >
+                <Tabs value={historyMetric} onValueChange={(v) => setHistoryMetric(v as typeof historyMetric)}>
+                  <TabsList className="bg-secondary border-0 h-auto p-0 mb-2">
+                    <TabsTrigger
+                      value="equity"
+                      className="data-[state=active]:bg-transparent data-[state=active]:text-bloomberg-green data-[state=active]:border-b data-[state=active]:border-bloomberg-green rounded-none px-3 py-1 text-xs font-mono uppercase"
+                    >
+                      Equity
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="loans"
+                      className="data-[state=active]:bg-transparent data-[state=active]:text-bloomberg-cyan data-[state=active]:border-b data-[state=active]:border-bloomberg-cyan rounded-none px-3 py-1 text-xs font-mono uppercase"
+                    >
+                      Loans
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="deposits"
+                      className="data-[state=active]:bg-transparent data-[state=active]:text-bloomberg-amber data-[state=active]:border-b data-[state=active]:border-bloomberg-amber rounded-none px-3 py-1 text-xs font-mono uppercase"
+                    >
+                      Deposits
+                    </TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="equity" className="m-0">
+                    {isHistoryLoading ? (
+                      <div className="h-[120px] flex items-center justify-center text-muted-foreground text-sm font-mono">
+                        Loading...
+                      </div>
+                    ) : (
+                      <TimeSeriesChart data={chartData} color="green" height={120} />
+                    )}
+                  </TabsContent>
+                  <TabsContent value="loans" className="m-0">
+                    {isHistoryLoading ? (
+                      <div className="h-[120px] flex items-center justify-center text-muted-foreground text-sm font-mono">
+                        Loading...
+                      </div>
+                    ) : (
+                      <TimeSeriesChart data={chartData} color="cyan" height={120} />
+                    )}
+                  </TabsContent>
+                  <TabsContent value="deposits" className="m-0">
+                    {isHistoryLoading ? (
+                      <div className="h-[120px] flex items-center justify-center text-muted-foreground text-sm font-mono">
+                        Loading...
+                      </div>
+                    ) : (
+                      <TimeSeriesChart data={chartData} color="amber" height={120} />
+                    )}
+                  </TabsContent>
+                </Tabs>
+              </Panel>
             </div>
           </TabsContent>
 

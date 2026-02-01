@@ -37,7 +37,7 @@ export async function getPortfolioHistory(
 
   const snapshots = await prisma.quarterlySnapshot.findMany({
     where: { bankId },
-    orderBy: { quarterEnd: "desc" },
+    orderBy: { createdAt: "desc" },
     take: limit,
   });
 
@@ -56,7 +56,7 @@ export async function getPortfolioHistory(
     }
 
     return {
-      timestamp: snapshot.quarterEnd,
+      timestamp: snapshot.createdAt,
       fiscalYear: snapshot.fiscalYear,
       fiscalQuarter: snapshot.fiscalQuarter,
       balance,
