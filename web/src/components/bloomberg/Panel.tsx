@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils"
 interface PanelProps extends React.HTMLAttributes<HTMLDivElement> {
   title?: string
   headerColor?: "blue" | "orange" | "amber" | "cyan" | "green" | "red"
+  headerRight?: React.ReactNode
   noPadding?: boolean
 }
 
@@ -17,7 +18,7 @@ const headerColors = {
 }
 
 const Panel = React.forwardRef<HTMLDivElement, PanelProps>(
-  ({ className, title, headerColor = "blue", noPadding = false, children, ...props }, ref) => {
+  ({ className, title, headerColor = "blue", headerRight, noPadding = false, children, ...props }, ref) => {
     return (
       <div
         ref={ref}
@@ -30,11 +31,12 @@ const Panel = React.forwardRef<HTMLDivElement, PanelProps>(
         {title && (
           <div
             className={cn(
-              "px-2 py-1 text-black font-bold text-xs uppercase tracking-wider",
+              "px-2 py-1 text-black font-bold text-xs uppercase tracking-wider flex items-center justify-between",
               headerColors[headerColor]
             )}
           >
-            {title}
+            <span>{title}</span>
+            {headerRight && <div onClick={(e) => e.stopPropagation()}>{headerRight}</div>}
           </div>
         )}
         <div className={cn("flex-1 overflow-auto", !noPadding && "p-2")}>

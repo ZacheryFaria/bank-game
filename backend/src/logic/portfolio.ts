@@ -47,9 +47,9 @@ export async function getPortfolioHistory(
   const snapshots = await prisma.quarterlySnapshot.findMany({
     where: {
       bankId,
-      ...(periodStart && { quarterEnd: { gte: periodStart } }),
+      ...(periodStart && { createdAt: { gte: periodStart } }),
     },
-    orderBy: { quarterEnd: "desc" },
+    orderBy: { createdAt: "desc" },
   });
 
   // Reverse to chronological order for charting
@@ -66,7 +66,7 @@ export async function getPortfolioHistory(
     }
 
     return {
-      timestamp: snapshot.quarterEnd,
+      timestamp: snapshot.createdAt,
       fiscalYear: snapshot.fiscalYear,
       fiscalQuarter: snapshot.fiscalQuarter,
       balance,
