@@ -28,8 +28,8 @@ const formatValue = (
   switch (format) {
     case "currency":
       formatted = value.toLocaleString(undefined, {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
       })
       return `${prefix || "$"}${formatted}${suffix || ""}`
     case "percent":

@@ -67,22 +67,14 @@ const HIGH_DEFAULT_RATE_THRESHOLD = 5; // Rates above 5% show warning (red)
 const MEDIUM_DEFAULT_RATE_THRESHOLD = 2; // Rates 2-5% show caution (yellow)
 const LOW_DEFAULT_RATE_THRESHOLD = 1; // Rates at or below 1% show success (green)
 
-/**
- * Calculate the default rate as a percentage
- * Formula: (originalPrincipal - currentBalance) / originalPrincipal * 100
- */
-const calculateDefaultRate = (originalPrincipal: number, currentBalance: number): number => {
-  return originalPrincipal > 0
-    ? ((originalPrincipal - currentBalance) / originalPrincipal) * 100
-    : 0;
-};
-
 type ProductDistribution = {
   product: string;
   balance: number;
   percentage: number;
   avgRate: number;
   defaultRate: number;
+  loanCount: number;
+  activeLoanCount: number;
 };
 
 type RiskDistribution = {
@@ -91,6 +83,8 @@ type RiskDistribution = {
   percentage: number;
   avgRate: number;
   defaultRate: number;
+  loanCount: number;
+  activeLoanCount: number;
 };
 
 type DepositDistribution = {
@@ -160,47 +154,27 @@ export function Dashboard() {
       return { productDistribution: [], riskDistribution: [] };
     }
 
-    // Track originalPrincipal to calculate default rates:
-    // defaultRate = (originalPrincipal - currentBalance) / originalPrincipal
-    const byProduct = new Map<string, {
-      balance: number;
-      originalPrincipal: number;
-      weightedRate: number;
-    }>();
+    type BucketAgg = { balance: number; weightedRate: number; loanCount: number; activeLoanCount: number };
+    const emptyAgg = (): BucketAgg => ({ balance: 0, weightedRate: 0, loanCount: 0, activeLoanCount: 0 });
 
-    // Track originalPrincipal to calculate default rates:
-    // defaultRate = (originalPrincipal - currentBalance) / originalPrincipal
-    const byRisk = new Map<string, {
-      balance: number;
-      originalPrincipal: number;
-      weightedRate: number;
-    }>();
+    const buckets = bank.loanBuckets;
+    const aggregateBuckets = (keyFn: (b: typeof buckets[number]) => string) => {
+      const map = new Map<string, BucketAgg>();
+      for (const bucket of buckets) {
+        const key = keyFn(bucket);
+        const existing = map.get(key) || emptyAgg();
+        map.set(key, {
+          balance: existing.balance + bucket.currentBalance,
+          weightedRate: existing.weightedRate + (bucket.currentBalance * bucket.interestRate),
+          loanCount: existing.loanCount + bucket.loanCount,
+          activeLoanCount: existing.activeLoanCount + bucket.activeLoanCount,
+        });
+      }
+      return map;
+    };
 
-    for (const bucket of bank.loanBuckets) {
-      const existingProduct = byProduct.get(bucket.product) || {
-        balance: 0,
-        originalPrincipal: 0,
-        weightedRate: 0,
-      };
-
-      byProduct.set(bucket.product, {
-        balance: existingProduct.balance + bucket.currentBalance,
-        originalPrincipal: existingProduct.originalPrincipal + bucket.originalPrincipal,
-        weightedRate: existingProduct.weightedRate + (bucket.currentBalance * bucket.interestRate),
-      });
-
-      const existingRisk = byRisk.get(bucket.riskClass) || {
-        balance: 0,
-        originalPrincipal: 0,
-        weightedRate: 0,
-      };
-
-      byRisk.set(bucket.riskClass, {
-        balance: existingRisk.balance + bucket.currentBalance,
-        originalPrincipal: existingRisk.originalPrincipal + bucket.originalPrincipal,
-        weightedRate: existingRisk.weightedRate + (bucket.currentBalance * bucket.interestRate),
-      });
-    }
+    const byProduct = aggregateBuckets((b) => b.product);
+    const byRisk = aggregateBuckets((b) => b.riskClass);
 
     const totalLoans = bank.currentLoans;
 
@@ -210,7 +184,9 @@ export function Dashboard() {
         balance: data.balance,
         percentage: totalLoans > 0 ? (data.balance / totalLoans) * 100 : 0,
         avgRate: data.balance > 0 ? data.weightedRate / data.balance : 0,
-        defaultRate: calculateDefaultRate(data.originalPrincipal, data.balance),
+        defaultRate: data.loanCount > 0 ? ((data.loanCount - data.activeLoanCount) / data.loanCount) * 100 : 0,
+        loanCount: data.loanCount,
+        activeLoanCount: data.activeLoanCount,
       };
     }).sort((a, b) => b.balance - a.balance);
 
@@ -222,7 +198,9 @@ export function Dashboard() {
         balance: data.balance,
         percentage: totalLoans > 0 ? (data.balance / totalLoans) * 100 : 0,
         avgRate: data.balance > 0 ? data.weightedRate / data.balance : 0,
-        defaultRate: calculateDefaultRate(data.originalPrincipal, data.balance),
+        defaultRate: data.loanCount > 0 ? ((data.loanCount - data.activeLoanCount) / data.loanCount) * 100 : 0,
+        loanCount: data.loanCount,
+        activeLoanCount: data.activeLoanCount,
       };
     }).sort((a, b) => {
       const aIndex = riskOrder.indexOf(a.riskClass);
@@ -233,31 +211,20 @@ export function Dashboard() {
     return { productDistribution: productDist, riskDistribution: riskDist };
   }, [bank]);
 
-  const productTotals = useMemo(() => {
+  const loanTotals = useMemo(() => {
     if (!bank?.loanBuckets || bank.loanBuckets.length === 0) {
-      return { defaultRate: 0 };
+      return { defaultRate: 0, loanCount: 0, activeLoanCount: 0 };
     }
 
-    const totalOriginal = bank.loanBuckets.reduce((sum, bucket) => sum + bucket.originalPrincipal, 0);
-    const totalCurrent = bank.loanBuckets.reduce((sum, bucket) => sum + bucket.currentBalance, 0);
+    const totalLoanCount = bank.loanBuckets.reduce((sum, bucket) => sum + bucket.loanCount, 0);
+    const totalActiveLoanCount = bank.loanBuckets.reduce((sum, bucket) => sum + bucket.activeLoanCount, 0);
 
     return {
-      defaultRate: calculateDefaultRate(totalOriginal, totalCurrent),
+      defaultRate: totalLoanCount > 0 ? ((totalLoanCount - totalActiveLoanCount) / totalLoanCount) * 100 : 0,
+      loanCount: totalLoanCount,
+      activeLoanCount: totalActiveLoanCount,
     };
-  }, [bank?.loanBuckets]);
-
-  const riskTotals = useMemo(() => {
-    if (!bank?.loanBuckets || bank.loanBuckets.length === 0) {
-      return { defaultRate: 0 };
-    }
-
-    const totalOriginal = bank.loanBuckets.reduce((sum, bucket) => sum + bucket.originalPrincipal, 0);
-    const totalCurrent = bank.loanBuckets.reduce((sum, bucket) => sum + bucket.currentBalance, 0);
-
-    return {
-      defaultRate: calculateDefaultRate(totalOriginal, totalCurrent),
-    };
-  }, [bank?.loanBuckets]);
+  }, [bank]);
 
   const depositDistribution = useMemo<DepositDistribution[]>(() => {
     if (!bank?.depositBuckets || bank.depositBuckets.length === 0) {
@@ -315,21 +282,45 @@ export function Dashboard() {
 
   const chartData = useMemo(() => {
     if (!portfolioHistory?.dataPoints) return [];
-    return portfolioHistory.dataPoints.map((point) => {
-      const value =
-        historyMetric === "equity"
-          ? point.totalEquity
-          : historyMetric === "loans"
-            ? point.totalLoans
-            : point.totalDeposits;
+
+    const getValue = (point: typeof portfolioHistory.dataPoints[number]) =>
+      historyMetric === "equity"
+        ? point.totalEquity
+        : historyMetric === "loans"
+          ? point.totalLoans
+          : point.totalDeposits;
+
+    // For 1h period, show every collection point; otherwise group by hour
+    if (historyPeriod === "1h") {
+      return portfolioHistory.dataPoints.map((point) => {
+        const date = new Date(point.timestamp);
+        return {
+          timestamp: date,
+          value: getValue(point),
+          label: date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
+        };
+      });
+    }
+
+    // Group by hour: take the last (most recent) snapshot per hour
+    const byHour = new Map<number, typeof portfolioHistory.dataPoints[number]>();
+    for (const point of portfolioHistory.dataPoints) {
       const date = new Date(point.timestamp);
-      return {
-        timestamp: date,
-        value,
-        label: date.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-      };
-    });
-  }, [portfolioHistory, historyMetric]);
+      const hourKey = new Date(date.getFullYear(), date.getMonth(), date.getDate(), date.getHours()).getTime();
+      byHour.set(hourKey, point);
+    }
+
+    return Array.from(byHour.entries())
+      .sort(([a], [b]) => a - b)
+      .map(([hourKey, point]) => {
+        const date = new Date(hourKey);
+        return {
+          timestamp: date,
+          value: getValue(point),
+          label: date.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+        };
+      });
+  }, [portfolioHistory, historyMetric, historyPeriod]);
 
   if (isLoading) {
     return (
@@ -874,6 +865,7 @@ export function Dashboard() {
                             <tr>
                               <DataGridHead>Product</DataGridHead>
                               <DataGridHead className="text-right">Balance</DataGridHead>
+                              <DataGridHead className="text-right">Loans</DataGridHead>
                               <DataGridHead className="text-right">% Portfolio</DataGridHead>
                               <DataGridHead className="text-right">Avg Rate</DataGridHead>
                               <DataGridHead className="text-right">Default Rate</DataGridHead>
@@ -887,6 +879,9 @@ export function Dashboard() {
                                 </DataGridCell>
                                 <DataGridCell numeric>
                                   {formatCurrency(item.balance)}
+                                </DataGridCell>
+                                <DataGridCell numeric>
+                                  {item.activeLoanCount.toLocaleString()} / {item.loanCount.toLocaleString()}
                                 </DataGridCell>
                                 <DataGridCell numeric>
                                   {formatPercent(item.percentage)}
@@ -912,11 +907,14 @@ export function Dashboard() {
                                 {formatCurrency(bank.currentLoans)}
                               </DataGridCell>
                               <DataGridCell numeric className="font-bold">
+                                {loanTotals.activeLoanCount.toLocaleString()} / {loanTotals.loanCount.toLocaleString()}
+                              </DataGridCell>
+                              <DataGridCell numeric className="font-bold">
                                 100.00%
                               </DataGridCell>
                               <DataGridCell numeric>—</DataGridCell>
                               <DataGridCell numeric className="font-bold">
-                                {formatPercent(productTotals.defaultRate)}
+                                {formatPercent(loanTotals.defaultRate)}
                               </DataGridCell>
                             </DataGridRow>
                           </DataGridBody>
@@ -965,6 +963,7 @@ export function Dashboard() {
                             <tr>
                               <DataGridHead>Risk Class</DataGridHead>
                               <DataGridHead className="text-right">Balance</DataGridHead>
+                              <DataGridHead className="text-right">Loans</DataGridHead>
                               <DataGridHead className="text-right">% Portfolio</DataGridHead>
                               <DataGridHead className="text-right">Avg Rate</DataGridHead>
                               <DataGridHead className="text-right">Default Rate</DataGridHead>
@@ -978,6 +977,9 @@ export function Dashboard() {
                                 </DataGridCell>
                                 <DataGridCell numeric>
                                   {formatCurrency(item.balance)}
+                                </DataGridCell>
+                                <DataGridCell numeric>
+                                  {item.activeLoanCount.toLocaleString()} / {item.loanCount.toLocaleString()}
                                 </DataGridCell>
                                 <DataGridCell numeric>
                                   {formatPercent(item.percentage)}
@@ -1003,11 +1005,14 @@ export function Dashboard() {
                                 {formatCurrency(bank.currentLoans)}
                               </DataGridCell>
                               <DataGridCell numeric className="font-bold">
+                                {loanTotals.activeLoanCount.toLocaleString()} / {loanTotals.loanCount.toLocaleString()}
+                              </DataGridCell>
+                              <DataGridCell numeric className="font-bold">
                                 100.00%
                               </DataGridCell>
                               <DataGridCell numeric>—</DataGridCell>
                               <DataGridCell numeric className="font-bold">
-                                {formatPercent(riskTotals.defaultRate)}
+                                {formatPercent(loanTotals.defaultRate)}
                               </DataGridCell>
                             </DataGridRow>
                           </DataGridBody>
