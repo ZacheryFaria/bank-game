@@ -144,7 +144,7 @@ const PortfolioHistoryPointSchema = z.object({
 const PortfolioHistoryQuerySchema = z.object({
   product: z.string().optional(),
   riskClass: z.string().optional(),
-  period: z.enum(["7d", "30d", "90d", "1y", "all"]).default("30d"),
+  period: z.enum(["1h", "12h", "1d", "7d", "30d", "90d", "1y", "all"]).default("30d"),
 });
 
 const PortfolioHistoryResponseSchema = z.object({

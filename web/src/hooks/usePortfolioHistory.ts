@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api";
 
 interface UsePortfolioHistoryOptions {
-  period?: "7d" | "30d" | "90d" | "1y" | "all";
+  period?: "1h" | "12h" | "1d" | "7d" | "30d" | "90d" | "1y" | "all";
   product?: string;
   riskClass?: string;
 }

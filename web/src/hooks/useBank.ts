@@ -52,6 +52,7 @@ export function useBank() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["bank"] });
+      queryClient.invalidateQueries({ queryKey: ["portfolio-history"] });
       toast.success(`Collected! Net Income: $${data.netIncome.toFixed(2)}`);
     },
     onError: (error: Error) => {

@@ -10,6 +10,12 @@ interface PortfolioHistoryFilters {
 function getPeriodStartDate(period: string): Date | null {
   const now = new Date();
   switch (period) {
+    case "1h":
+      return new Date(now.getTime() - 1 * 60 * 60 * 1000);
+    case "12h":
+      return new Date(now.getTime() - 12 * 60 * 60 * 1000);
+    case "1d":
+      return new Date(now.getTime() - 24 * 60 * 60 * 1000);
     case "7d":
       return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     case "30d":

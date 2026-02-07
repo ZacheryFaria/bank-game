@@ -131,7 +131,7 @@ export function Dashboard() {
   });
 
   // Portfolio history chart state
-  const [historyPeriod, setHistoryPeriod] = useState<"7d" | "30d" | "90d" | "1y" | "all">("30d");
+  const [historyPeriod, setHistoryPeriod] = useState<"1h" | "12h" | "1d" | "7d" | "30d" | "90d" | "1y" | "all">("1h");
   const [historyMetric, setHistoryMetric] = useState<"equity" | "loans" | "deposits">("equity");
   const { data: portfolioHistory, isLoading: isHistoryLoading } = usePortfolioHistory({ period: historyPeriod });
 
@@ -302,6 +302,16 @@ export function Dashboard() {
       return acc;
     }, { balance: 0, bucketCount: 0 });
   }, [depositDistribution]);
+
+  const periodToMs: Record<string, number | undefined> = {
+    "1h": 1 * 60 * 60 * 1000,
+    "12h": 12 * 60 * 60 * 1000,
+    "1d": 24 * 60 * 60 * 1000,
+    "7d": 7 * 24 * 60 * 60 * 1000,
+    "30d": 30 * 24 * 60 * 60 * 1000,
+    "90d": 90 * 24 * 60 * 60 * 1000,
+    "1y": 365 * 24 * 60 * 60 * 1000,
+  };
 
   const chartData = useMemo(() => {
     if (!portfolioHistory?.dataPoints) return [];
@@ -546,6 +556,9 @@ export function Dashboard() {
                     onChange={(e) => setHistoryPeriod(e.target.value as typeof historyPeriod)}
                     className="bg-secondary text-foreground text-xs font-mono border border-border px-2 py-1 rounded"
                   >
+                    <option value="1h">1 Hour</option>
+                    <option value="12h">12 Hours</option>
+                    <option value="1d">1 Day</option>
                     <option value="7d">7 Days</option>
                     <option value="30d">30 Days</option>
                     <option value="90d">90 Days</option>
@@ -584,6 +597,7 @@ export function Dashboard() {
                       data={chartData}
                       color={historyMetric === "equity" ? "green" : historyMetric === "loans" ? "cyan" : "amber"}
                       height={120}
+                      minTimeSpanMs={periodToMs[historyPeriod]}
                     />
                   )}
                 </Tabs>
