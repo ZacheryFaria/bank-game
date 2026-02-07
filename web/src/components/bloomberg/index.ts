@@ -23,5 +23,7 @@ export {
   SplitPane,
 } from "./BloombergLayout"
 export { MiniChart, BarChart } from "./MiniChart"
+export { TimeSeriesChart } from "./TimeSeriesChart"
+export type { TimeSeriesChartProps, DataPoint } from "./TimeSeriesChart"
 export { DetailDrawer } from "./DetailDrawer"
 export type { DetailDrawerProps, Tab } from "./DetailDrawer"
