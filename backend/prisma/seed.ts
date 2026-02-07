@@ -59,7 +59,6 @@ async function main() {
             transactions: {
               create: {
                 timestamp: new Date(),
-                collectedAt: new Date(),
                 type: 'initial_funding',
                 amount: STARTING_EQUITY,
                 details: { description: 'Initial bank funding' },

@@ -29,7 +29,7 @@ export async function cleanupTestDatabase() {
 
 export async function resetTestDatabase(prisma: PrismaClient) {
   const tables = [
-    "quarterly_snapshots",
+    "snapshots",
     "collections",
     "transactions",
     "deposit_buckets",

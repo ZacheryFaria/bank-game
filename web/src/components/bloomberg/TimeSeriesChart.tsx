@@ -15,6 +15,8 @@ interface TimeSeriesChartProps extends React.HTMLAttributes<HTMLDivElement> {
   showArea?: boolean;
   formatValue?: (value: number) => string;
   formatLabel?: (timestamp: Date, index: number, total: number) => string;
+  /** Minimum time span in ms for the x-axis. The axis will always cover at least this duration. */
+  minTimeSpanMs?: number;
 }
 
 const defaultFormatValue = (value: number): string => {
@@ -37,12 +39,14 @@ const TimeSeriesChart = React.forwardRef<HTMLDivElement, TimeSeriesChartProps>(
       showArea = true,
       formatValue = defaultFormatValue,
       formatLabel,
+      minTimeSpanMs,
       ...props
     },
     ref
   ) => {
     const containerRef = React.useRef<HTMLDivElement>(null);
     const [width, setWidth] = React.useState(400);
+    const [hoveredIndex, setHoveredIndex] = React.useState<number | null>(null);
 
     React.useEffect(() => {
       const updateWidth = () => {
@@ -80,11 +84,16 @@ const TimeSeriesChart = React.forwardRef<HTMLDivElement, TimeSeriesChartProps>(
     const range = max - min || 1;
 
     const times = data.map((d) => d.timestamp.getTime());
-    const minTime = Math.min(...times);
-    const maxTime = Math.max(...times);
+    let minTime = Math.min(...times);
+    let maxTime = Math.max(...times);
+    // Enforce minimum time span on the x-axis
+    if (minTimeSpanMs && maxTime - minTime < minTimeSpanMs) {
+      maxTime = Math.max(maxTime, Date.now());
+      minTime = maxTime - minTimeSpanMs;
+    }
     const timeRange = maxTime - minTime || 1;
 
-    const padding = { top: 5, bottom: 25, left: 60, right: 10 };
+    const padding = { top: 20, bottom: 25, left: 60, right: 10 };
     const chartWidth = width - padding.left - padding.right;
     const chartHeight = height - padding.top - padding.bottom;
 
@@ -93,15 +102,32 @@ const TimeSeriesChart = React.forwardRef<HTMLDivElement, TimeSeriesChartProps>(
       return padding.left + ((t - minTime) / timeRange) * chartWidth;
     };
 
+    const getY = (value: number) => {
+      return padding.top + chartHeight - ((value - min) / range) * chartHeight;
+    };
+
     const points = data
-      .map((d) => {
-        const x = getX(d.timestamp);
-        const y = padding.top + chartHeight - ((d.value - min) / range) * chartHeight;
-        return `${x},${y}`;
-      })
+      .map((d) => `${getX(d.timestamp)},${getY(d.value)}`)
       .join(" ");
 
-    const areaPoints = `${padding.left},${padding.top + chartHeight} ${points} ${padding.left + chartWidth},${padding.top + chartHeight}`;
+    const handleMouseMove = (e: React.MouseEvent<SVGRectElement>) => {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left + padding.left;
+      let closest = 0;
+      let closestDist = Infinity;
+      for (let i = 0; i < data.length; i++) {
+        const dist = Math.abs(getX(data[i].timestamp) - mouseX);
+        if (dist < closestDist) {
+          closestDist = dist;
+          closest = i;
+        }
+      }
+      setHoveredIndex(closest);
+    };
+
+    const firstX = getX(data[0].timestamp);
+    const lastX = getX(data[data.length - 1].timestamp);
+    const areaPoints = `${firstX},${padding.top + chartHeight} ${points} ${lastX},${padding.top + chartHeight}`;
 
     // Select label indices spread across time, not array position
     const labelIndices: number[] = [];
@@ -135,7 +161,7 @@ const TimeSeriesChart = React.forwardRef<HTMLDivElement, TimeSeriesChartProps>(
           if (typeof ref === "function") ref(node);
           else if (ref) ref.current = node;
         }}
-        className={cn("overflow-hidden", className)}
+        className={cn("overflow-hidden border border-border rounded", className)}
         {...props}
       >
         <svg width={width} height={height}>
@@ -172,6 +198,19 @@ const TimeSeriesChart = React.forwardRef<HTMLDivElement, TimeSeriesChartProps>(
             strokeLinejoin="round"
           />
 
+          {/* Data point dots */}
+          {data.map((d, i) => (
+            <circle
+              key={i}
+              cx={getX(d.timestamp)}
+              cy={getY(d.value)}
+              r={2.5}
+              fill={chartColors[color].stroke}
+              stroke="rgba(0,0,0,0.5)"
+              strokeWidth="0.5"
+            />
+          ))}
+
           {/* X-axis labels */}
           {labelIndices.map((i) => {
             const x = getX(data[i].timestamp);
@@ -193,6 +232,82 @@ const TimeSeriesChart = React.forwardRef<HTMLDivElement, TimeSeriesChartProps>(
               </text>
             );
           })}
+
+          {/* Hover overlay */}
+          <rect
+            x={padding.left}
+            y={padding.top}
+            width={chartWidth}
+            height={chartHeight}
+            fill="transparent"
+            onMouseMove={handleMouseMove}
+            onMouseLeave={() => setHoveredIndex(null)}
+            style={{ cursor: "crosshair" }}
+          />
+
+          {/* Crosshair + tooltip */}
+          {hoveredIndex !== null && (() => {
+            const hx = getX(data[hoveredIndex].timestamp);
+            const hy = getY(data[hoveredIndex].value);
+            const dateLabel = data[hoveredIndex].timestamp.toLocaleDateString(undefined, {
+              month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
+            });
+            // Anchor tooltip left or right to keep it in bounds
+            const tooltipAnchor = hx > padding.left + chartWidth / 2 ? "end" : "start";
+            const tooltipX = tooltipAnchor === "end" ? hx - 12 : hx + 12;
+            // Position tooltip as a group above the point, or below if near top
+            const tooltipAbove = hy > padding.top + 36;
+            const groupY = tooltipAbove ? hy - 28 : hy + 16;
+            const valueLabelY = groupY;
+            const dateLabelY = groupY + 13;
+            const bgW = 110;
+            const bgH = 30;
+            const bgX = tooltipAnchor === "end" ? tooltipX - bgW + 4 : tooltipX - 4;
+            const bgY = valueLabelY - 12;
+            return (
+              <>
+                <line
+                  x1={hx} y1={padding.top}
+                  x2={hx} y2={padding.top + chartHeight}
+                  stroke="rgba(255,255,255,0.2)"
+                  strokeDasharray="3,3"
+                />
+                <circle
+                  cx={hx} cy={hy} r={3.5}
+                  fill={chartColors[color].stroke}
+                  stroke="rgba(0,0,0,0.8)"
+                  strokeWidth="1.5"
+                />
+                {/* Tooltip background */}
+                <rect
+                  x={bgX}
+                  y={bgY}
+                  width={bgW}
+                  height={bgH}
+                  rx={3}
+                  fill="rgba(30,30,30,0.9)"
+                />
+                <text
+                  x={tooltipX}
+                  y={valueLabelY}
+                  textAnchor={tooltipAnchor}
+                  className="fill-foreground"
+                  style={{ fontSize: "11px", fontFamily: "monospace", fontWeight: 600 }}
+                >
+                  {formatValue(data[hoveredIndex].value)}
+                </text>
+                <text
+                  x={tooltipX}
+                  y={dateLabelY}
+                  textAnchor={tooltipAnchor}
+                  className="fill-muted-foreground"
+                  style={{ fontSize: "9px", fontFamily: "monospace" }}
+                >
+                  {dateLabel}
+                </text>
+              </>
+            );
+          })()}
         </svg>
       </div>
     );

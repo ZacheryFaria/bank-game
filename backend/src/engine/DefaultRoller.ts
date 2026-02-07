@@ -42,18 +42,18 @@ class SeededRandom {
  *
  * Formula:
  *   annualDefaultRate = baseRate for risk class
- *   periodDefaultRate = annualDefaultRate * (gameQuarters / 4)
+ *   periodDefaultRate = annualDefaultRate * (realHoursElapsed / 4)
  *   expectedDefaults = balance * periodDefaultRate
  *   actualDefaults = expectedDefaults * randomVariance(0.8, 1.2)
  *
  * @param bucket - Loan bucket data
- * @param gameQuarters - Number of game quarters elapsed
+ * @param realHoursElapsed - Number of real hours elapsed (1 hour = 1 quarter for rate math)
  * @param rng - Seeded random number generator
  * @returns Default amount for this bucket
  */
 function calculateBucketDefaults(
   bucket: LoanBucketData,
-  gameQuarters: number,
+  realHoursElapsed: number,
   rng: SeededRandom
 ): number {
   if (bucket.currentBalance <= 0 || bucket.activeLoanCount === 0) {
@@ -61,7 +61,7 @@ function calculateBucketDefaults(
   }
 
   const annualDefaultRate = DEFAULT_RATES[bucket.riskClass]
-  const periodDefaultRate = annualDefaultRate * (gameQuarters / 4)
+  const periodDefaultRate = annualDefaultRate * (realHoursElapsed / 4)
 
   // Calculate expected defaults
   const expectedDefaults = bucket.currentBalance * periodDefaultRate
@@ -78,13 +78,13 @@ function calculateBucketDefaults(
  * Calculate defaults across all loan buckets
  *
  * @param loanBuckets - Array of loan buckets
- * @param gameQuarters - Number of game quarters elapsed
+ * @param realHoursElapsed - Number of real hours elapsed (1 hour = 1 quarter for rate math)
  * @param seed - Random seed for deterministic results
  * @returns Default result with totals and per-bucket breakdown
  */
 export function calculateDefaults(
   loanBuckets: LoanBucketData[],
-  gameQuarters: number,
+  realHoursElapsed: number,
   seed: string
 ): DefaultResult {
   const rng = new SeededRandom(BigInt(seed))
@@ -99,7 +99,7 @@ export function calculateDefaults(
   >()
 
   for (const bucket of loanBuckets) {
-    const defaultAmount = calculateBucketDefaults(bucket, gameQuarters, rng)
+    const defaultAmount = calculateBucketDefaults(bucket, realHoursElapsed, rng)
 
     if (defaultAmount > 0) {
       totalDefaults += defaultAmount

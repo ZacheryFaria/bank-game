@@ -10,6 +10,12 @@ interface PortfolioHistoryFilters {
 function getPeriodStartDate(period: string): Date | null {
   const now = new Date();
   switch (period) {
+    case "1h":
+      return new Date(now.getTime() - 1 * 60 * 60 * 1000);
+    case "12h":
+      return new Date(now.getTime() - 12 * 60 * 60 * 1000);
+    case "1d":
+      return new Date(now.getTime() - 24 * 60 * 60 * 1000);
     case "7d":
       return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     case "30d":
@@ -44,12 +50,15 @@ export async function getPortfolioHistory(
 
   const periodStart = getPeriodStartDate(filters?.period || "30d");
 
-  const snapshots = await prisma.quarterlySnapshot.findMany({
+  const MAX_PORTFOLIO_SNAPSHOTS = 1000;
+
+  const snapshots = await prisma.snapshot.findMany({
     where: {
       bankId,
-      ...(periodStart && { createdAt: { gte: periodStart } }),
+      ...(periodStart && { periodEnd: { gte: periodStart } }),
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: { periodEnd: "desc" },
+    take: MAX_PORTFOLIO_SNAPSHOTS,
   });
 
   // Reverse to chronological order for charting
@@ -66,9 +75,7 @@ export async function getPortfolioHistory(
     }
 
     return {
-      timestamp: snapshot.createdAt,
-      fiscalYear: snapshot.fiscalYear,
-      fiscalQuarter: snapshot.fiscalQuarter,
+      timestamp: snapshot.periodEnd,
       balance,
       defaultRate: converted.defaultRate,
       totalEquity: converted.totalEquity,

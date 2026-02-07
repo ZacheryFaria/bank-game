@@ -28,9 +28,17 @@ const Slider = React.forwardRef<
       const rawValue = min + percent * range
       const snappedValue = Math.round(rawValue / step) * step
       const clampedValue = Math.max(min, Math.min(max, snappedValue))
-      const snappedPercent = ((clampedValue - min) / range) * 100
+      const snappedPercent = (clampedValue - min) / range
 
-      setGhostPosition(snappedPercent)
+      // Radix offsets the thumb by half its width at the edges, so the thumb
+      // center at 0% is at thumbRadius and at 100% is at (trackWidth - thumbRadius).
+      // Map our linear percent into that same range so the ghost aligns.
+      const thumbRadius = 8 // half of the 16px (h-4 w-4) thumb
+      const usable = rect.width - thumbRadius * 2
+      const px = thumbRadius + snappedPercent * usable
+      const cssPercent = (px / rect.width) * 100
+
+      setGhostPosition(cssPercent)
     },
     [min, max, step]
   )
@@ -46,7 +54,7 @@ const Slider = React.forwardRef<
       max={max}
       step={step}
       className={cn(
-        "relative flex w-full touch-none select-none items-center cursor-pointer",
+        "relative flex w-full touch-none select-none items-center cursor-pointer py-3",
         className
       )}
       {...props}

@@ -70,10 +70,7 @@ const TransactionSchema = z.object({
 });
 
 const CollectionReportSchema = z.object({
-  gameTimeStart: z.coerce.date(),
-  gameTimeEnd: z.coerce.date(),
   realHoursElapsed: z.number(),
-  gameQuartersElapsed: z.number(),
   loansOriginated: z.number(),
   interestIncome: z.number(),
   interestExpense: z.number(),
@@ -101,11 +98,9 @@ const BankListItemSchema = z.object({
   lastCollectedAt: z.coerce.date(),
 });
 
-const QuarterlySnapshotSchema = z.object({
+const SnapshotSchema = z.object({
   id: z.string(),
-  quarterEnd: z.coerce.date(),
-  fiscalYear: z.number(),
-  fiscalQuarter: z.number(),
+  periodEnd: z.coerce.date(),
   totalAssets: z.number(),
   totalLoans: z.number(),
   loanLossReserve: z.number(),
@@ -137,8 +132,6 @@ const PaginationSchema = z.object({
 
 const PortfolioHistoryPointSchema = z.object({
   timestamp: z.coerce.date(),
-  fiscalYear: z.number(),
-  fiscalQuarter: z.number(),
   balance: z.number(),
   defaultRate: z.number(),
   totalEquity: z.number(),
@@ -151,7 +144,7 @@ const PortfolioHistoryPointSchema = z.object({
 const PortfolioHistoryQuerySchema = z.object({
   product: z.string().optional(),
   riskClass: z.string().optional(),
-  period: z.enum(["7d", "30d", "90d", "1y", "all"]).default("30d"),
+  period: z.enum(["1h", "12h", "1d", "7d", "30d", "90d", "1y", "all"]).default("30d"),
 });
 
 const PortfolioHistoryResponseSchema = z.object({
@@ -380,7 +373,7 @@ export const contract = c.router({
       path: "/api/banks/:id/financials",
       responses: {
         200: z.object({
-          snapshots: z.array(QuarterlySnapshotSchema),
+          snapshots: z.array(SnapshotSchema),
         }),
         404: z.object({
           error: z.string(),
@@ -390,11 +383,11 @@ export const contract = c.router({
         id: z.string(),
       }),
       query: z.object({
-        year: z.coerce.number().optional(),
-        quarter: z.coerce.number().min(1).max(4).optional(),
-        limit: z.coerce.number().optional(),
+        startDate: z.string().datetime().optional(),
+        endDate: z.string().datetime().optional(),
+        limit: z.coerce.number().min(1).max(1000).optional(),
       }),
-      summary: "Get quarterly financial statements",
+      summary: "Get financial statement snapshots",
     },
   },
   market: {

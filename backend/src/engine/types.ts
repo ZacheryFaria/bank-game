@@ -96,10 +96,7 @@ export interface TransactionRecord {
 }
 
 export interface CollectionReport {
-  gameTimeStart: Date
-  gameTimeEnd: Date
   realHoursElapsed: number
-  gameQuartersElapsed: number
   loansOriginated: number
   interestIncome: number
   interestExpense: number
