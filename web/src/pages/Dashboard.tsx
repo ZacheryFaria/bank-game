@@ -154,49 +154,27 @@ export function Dashboard() {
       return { productDistribution: [], riskDistribution: [] };
     }
 
-    const byProduct = new Map<string, {
-      balance: number;
-      weightedRate: number;
-      loanCount: number;
-      activeLoanCount: number;
-    }>();
+    type BucketAgg = { balance: number; weightedRate: number; loanCount: number; activeLoanCount: number };
+    const emptyAgg = (): BucketAgg => ({ balance: 0, weightedRate: 0, loanCount: 0, activeLoanCount: 0 });
 
-    const byRisk = new Map<string, {
-      balance: number;
-      weightedRate: number;
-      loanCount: number;
-      activeLoanCount: number;
-    }>();
+    const buckets = bank.loanBuckets;
+    const aggregateBuckets = (keyFn: (b: typeof buckets[number]) => string) => {
+      const map = new Map<string, BucketAgg>();
+      for (const bucket of buckets) {
+        const key = keyFn(bucket);
+        const existing = map.get(key) || emptyAgg();
+        map.set(key, {
+          balance: existing.balance + bucket.currentBalance,
+          weightedRate: existing.weightedRate + (bucket.currentBalance * bucket.interestRate),
+          loanCount: existing.loanCount + bucket.loanCount,
+          activeLoanCount: existing.activeLoanCount + bucket.activeLoanCount,
+        });
+      }
+      return map;
+    };
 
-    for (const bucket of bank.loanBuckets) {
-      const existingProduct = byProduct.get(bucket.product) || {
-        balance: 0,
-        weightedRate: 0,
-        loanCount: 0,
-        activeLoanCount: 0,
-      };
-
-      byProduct.set(bucket.product, {
-        balance: existingProduct.balance + bucket.currentBalance,
-        weightedRate: existingProduct.weightedRate + (bucket.currentBalance * bucket.interestRate),
-        loanCount: existingProduct.loanCount + bucket.loanCount,
-        activeLoanCount: existingProduct.activeLoanCount + bucket.activeLoanCount,
-      });
-
-      const existingRisk = byRisk.get(bucket.riskClass) || {
-        balance: 0,
-        weightedRate: 0,
-        loanCount: 0,
-        activeLoanCount: 0,
-      };
-
-      byRisk.set(bucket.riskClass, {
-        balance: existingRisk.balance + bucket.currentBalance,
-        weightedRate: existingRisk.weightedRate + (bucket.currentBalance * bucket.interestRate),
-        loanCount: existingRisk.loanCount + bucket.loanCount,
-        activeLoanCount: existingRisk.activeLoanCount + bucket.activeLoanCount,
-      });
-    }
+    const byProduct = aggregateBuckets((b) => b.product);
+    const byRisk = aggregateBuckets((b) => b.riskClass);
 
     const totalLoans = bank.currentLoans;
 
