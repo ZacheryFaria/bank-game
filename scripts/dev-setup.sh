@@ -1,6 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# --- Pre-flight checks ---
+for cmd in docker pnpm; do
+  if ! command -v "$cmd" &> /dev/null; then
+    echo "✗ Required command '$cmd' is not installed." >&2
+    exit 1
+  fi
+done
+
+if ! docker compose version &> /dev/null; then
+  echo "✗ 'docker compose' is not available. Check your Docker installation." >&2
+  exit 1
+fi
+
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 BACKEND_DIR="$ROOT_DIR/backend"
 CONTAINER_NAME="bankgame-postgres"
@@ -49,6 +62,9 @@ pnpm prisma generate --no-hints
 
 echo "→ Applying pending migrations"
 pnpm prisma migrate deploy
+
+echo "→ Seeding database (if needed)"
+pnpm prisma db seed || true
 
 echo ""
 echo "✓ Dev environment is ready"
