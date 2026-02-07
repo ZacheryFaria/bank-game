@@ -68,10 +68,7 @@ describe("Collection API Integration Tests", () => {
       expect(response.statusCode).toBe(200);
       const body = JSON.parse(response.body);
 
-      expect(body.gameTimeStart).toBeDefined();
-      expect(body.gameTimeEnd).toBeDefined();
       expect(body.realHoursElapsed).toBeGreaterThan(0);
-      expect(body.gameQuartersElapsed).toBeGreaterThan(0);
       expect(body.endingEquity).toBeDefined();
       expect(body.endingLoans).toBeDefined();
       expect(body.endingDeposits).toBeDefined();

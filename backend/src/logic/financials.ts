@@ -5,16 +5,15 @@ import { convertSnapshotDecimals } from "../lib/prismaHelpers.js";
 const DEFAULT_SNAPSHOT_LIMIT = 100;
 
 interface GetSnapshotsFilters {
-  year?: number;
-  quarter?: number;
+  startDate?: string;
+  endDate?: string;
   limit?: number;
 }
 
-export async function getQuarterlySnapshots(
+export async function getSnapshots(
   bankId: string,
   filters?: GetSnapshotsFilters
 ) {
-  // First, verify the bank exists
   const bank = await prisma.bank.findUnique({
     where: { id: bankId },
     select: { id: true },
@@ -27,25 +26,24 @@ export async function getQuarterlySnapshots(
     };
   }
 
-  // Build where clause with proper type safety
-  const where: Prisma.QuarterlySnapshotWhereInput = { bankId };
+  const where: Prisma.SnapshotWhereInput = { bankId };
 
-  if (filters?.year) {
-    where.fiscalYear = filters.year;
+  if (filters?.startDate || filters?.endDate) {
+    where.periodEnd = {};
+    if (filters.startDate) {
+      (where.periodEnd as Prisma.DateTimeFilter).gte = new Date(filters.startDate);
+    }
+    if (filters.endDate) {
+      (where.periodEnd as Prisma.DateTimeFilter).lte = new Date(filters.endDate);
+    }
   }
 
-  if (filters?.quarter) {
-    where.fiscalQuarter = filters.quarter;
-  }
-
-  // Query snapshots
-  const snapshots = await prisma.quarterlySnapshot.findMany({
+  const snapshots = await prisma.snapshot.findMany({
     where,
-    orderBy: { quarterEnd: "desc" },
+    orderBy: { periodEnd: "desc" },
     take: filters?.limit || DEFAULT_SNAPSHOT_LIMIT,
   });
 
-  // Convert Decimal fields to numbers
   const convertedSnapshots = snapshots.map(convertSnapshotDecimals);
 
   return {

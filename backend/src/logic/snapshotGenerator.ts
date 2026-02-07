@@ -1,20 +1,10 @@
-import { PrismaClient, LoanBucket, Transaction } from "@prisma/client";
-import { getFiscalQuarter, getFiscalYear, getQuarterStart } from "../engine/quarterUtils.js";
+import { PrismaClient, LoanBucket } from "@prisma/client";
+import type { CollectionReport } from "../engine/types.js";
 
 type PrismaTransaction = Omit<
   PrismaClient,
   "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends"
 >;
-
-/**
- * Helper: Sum transaction amounts preserving sign semantics.
- * Convention: Positive = inflow/income, Negative = outflow/expense/loss
- */
-function sumTransactionAmounts(transactions: Transaction[]): number {
-  return transactions.reduce((sum, tx) => {
-    return sum + Number(tx.amount);
-  }, 0);
-}
 
 /**
  * Helper: Build portfolio breakdown by product
@@ -49,70 +39,35 @@ function buildRiskClassBreakdown(loanBuckets: LoanBucket[]): Record<string, numb
 const INITIAL_BANK_EQUITY = 200000;
 
 /**
- * Generate a quarterly snapshot for a bank.
- * This function aggregates transaction data and bucket balances to create
- * a complete financial statement for a specific quarter.
+ * Generate a snapshot for a bank after a collection.
+ * Uses the collection report's financial data directly rather than
+ * re-querying transactions.
  *
  * @param bankId - The bank's UUID
- * @param quarterEnd - The last moment of the quarter
+ * @param periodEnd - The real timestamp of this collection
+ * @param realHoursElapsed - Hours elapsed in this collection period
+ * @param report - The collection report with income statement data
  * @param tx - Prisma client or transaction
  */
-export async function generateQuarterlySnapshot(
+export async function generateSnapshot(
   bankId: string,
-  quarterEnd: Date,
+  periodEnd: Date,
+  realHoursElapsed: number,
+  report: CollectionReport,
   tx: PrismaTransaction | PrismaClient
 ) {
-  const quarterStart = getQuarterStart(quarterEnd);
-  const fiscalYear = getFiscalYear(quarterEnd);
-  const fiscalQuarter = getFiscalQuarter(quarterEnd);
-
-  // 1. Fetch all transactions for this quarter
-  const transactions = await tx.transaction.findMany({
-    where: {
-      bankId,
-      timestamp: {
-        gte: quarterStart,
-        lte: quarterEnd,
-      },
-    },
-  });
-
-  // 2. Group transactions by type using a single pass for efficiency
-  const txByType = transactions.reduce((acc, t) => {
-    if (!acc[t.type]) {
-      acc[t.type] = [];
-    }
-    acc[t.type].push(t);
-    return acc;
-  }, {} as Record<string, Transaction[]>);
-
-  // Ensure all transaction types exist (empty arrays if none)
-  const groupedTx = {
-    loan_origination: txByType.loan_origination || [],
-    loan_repayment: txByType.loan_repayment || [],
-    interest_income: txByType.interest_income || [],
-    interest_expense: txByType.interest_expense || [],
-    loan_default: txByType.loan_default || [],
-    deposit_inflow: txByType.deposit_inflow || [],
-    deposit_outflow: txByType.deposit_outflow || [],
-    operating_expense: txByType.operating_expense || [],
-  };
-
-  // 3. Calculate income statement items
-  const interestIncome = sumTransactionAmounts(groupedTx.interest_income);
-  const interestExpense = -sumTransactionAmounts(groupedTx.interest_expense);
+  // 1. Income statement items from the collection report
+  const interestIncome = report.interestIncome;
+  const interestExpense = report.interestExpense;
   const netInterestIncome = interestIncome - interestExpense;
-  const provisionForLosses = -sumTransactionAmounts(groupedTx.loan_default);
-  const operatingExpenses = -sumTransactionAmounts(groupedTx.operating_expense);
-  const netIncome = netInterestIncome - provisionForLosses - operatingExpenses;
+  const provisionForLosses = report.defaultLosses;
+  const operatingExpenses = report.operatingExpenses;
+  const netIncome = report.netIncome;
 
-  // 4. Query loan and deposit buckets at quarter end
-  // Note: This is an approximation using current state
-  // Buckets originated after quarter end are excluded
+  // 2. Query current bucket state for balance sheet
   const loanBuckets = await tx.loanBucket.findMany({
     where: {
       bankId,
-      originationHour: { lte: quarterEnd },
       currentBalance: { gt: 0 },
     },
   });
@@ -120,12 +75,11 @@ export async function generateQuarterlySnapshot(
   const depositBuckets = await tx.depositBucket.findMany({
     where: {
       bankId,
-      originationHour: { lte: quarterEnd },
       currentBalance: { gt: 0 },
     },
   });
 
-  // 5. Calculate balance sheet items
+  // 3. Calculate balance sheet items
   const totalLoans = loanBuckets.reduce(
     (sum, bucket) => sum + Number(bucket.currentBalance),
     0
@@ -136,16 +90,15 @@ export async function generateQuarterlySnapshot(
     0
   );
 
-  // Reuse provision for losses calculation (already computed from loan_default transactions)
   const loanLossReserve = provisionForLosses;
 
-  // Get opening equity from previous quarter or use initial bank equity
-  const previousSnapshot = await tx.quarterlySnapshot.findFirst({
+  // Get opening equity from previous snapshot or use initial bank equity
+  const previousSnapshot = await tx.snapshot.findFirst({
     where: {
       bankId,
-      quarterEnd: { lt: quarterEnd },
+      periodEnd: { lt: periodEnd },
     },
-    orderBy: { quarterEnd: 'desc' },
+    orderBy: { periodEnd: 'desc' },
     select: { totalEquity: true },
   });
 
@@ -153,40 +106,36 @@ export async function generateQuarterlySnapshot(
     ? Number(previousSnapshot.totalEquity)
     : INITIAL_BANK_EQUITY;
 
-  // Calculate closing equity: Opening Equity + Net Income
   const totalEquity = openingEquity + netIncome;
 
-  // Use accounting equation: Assets = Liabilities + Equity
   const totalLiabilities = totalDeposits;
   const totalAssets = totalLiabilities + totalEquity;
 
-  // Calculate cash as the balancing item: Cash = Total Assets - Loans - Loan Loss Reserve
   const cashAndReserves = totalAssets - totalLoans - loanLossReserve;
 
-  // 6. Calculate key ratios (guard against division by zero)
+  // 4. Calculate key ratios (annualized dynamically based on collection period)
+  const annualizationFactor = realHoursElapsed > 0 ? 4 / realHoursElapsed : 0;
+
   const capitalRatio = totalAssets > 0 ? totalEquity / totalAssets : 0;
 
-  // Annualize quarterly values (multiply by 4)
   const netInterestMargin = totalAssets > 0
-    ? (netInterestIncome / totalAssets) * 4
+    ? (netInterestIncome / totalAssets) * annualizationFactor
     : 0;
 
   const returnOnEquity = totalEquity > 0
-    ? (netIncome / totalEquity) * 4
+    ? (netIncome / totalEquity) * annualizationFactor
     : 0;
 
   const defaultRate = totalLoans > 0
-    ? (provisionForLosses / totalLoans) * 4
+    ? (provisionForLosses / totalLoans) * annualizationFactor
     : 0;
 
-  // 7. Build portfolio breakdowns
+  // 5. Build portfolio breakdowns
   const portfolioByProduct = buildProductBreakdown(loanBuckets);
   const portfolioByRiskClass = buildRiskClassBreakdown(loanBuckets);
 
-  // 8. Upsert snapshot record
+  // 6. Upsert snapshot record
   const snapshotData = {
-    fiscalYear,
-    fiscalQuarter,
     totalAssets,
     totalLoans,
     loanLossReserve,
@@ -208,17 +157,17 @@ export async function generateQuarterlySnapshot(
     portfolioByRiskClass,
   };
 
-  const snapshot = await tx.quarterlySnapshot.upsert({
+  const snapshot = await tx.snapshot.upsert({
     where: {
-      bankId_quarterEnd: {
+      bankId_periodEnd: {
         bankId,
-        quarterEnd,
+        periodEnd,
       },
     },
     update: snapshotData,
     create: {
       bankId,
-      quarterEnd,
+      periodEnd,
       ...snapshotData,
     },
   });

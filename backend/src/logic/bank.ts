@@ -8,8 +8,7 @@ import {
   convertRateDecimals,
   convertAllocationDecimals,
 } from "../lib/prismaHelpers.js";
-import { getQuartersCrossed } from "../engine/quarterUtils.js";
-import { generateQuarterlySnapshot } from "./snapshotGenerator.js";
+import { generateSnapshot } from "./snapshotGenerator.js";
 
 type CollectBankSuccess = {
   kind: "success";
@@ -251,10 +250,7 @@ async function createCollectionRecord(tx: any, bankId: string, now: Date, report
     data: {
       bankId,
       collectedAt: now,
-      gameTimeStart: report.gameTimeStart,
-      gameTimeEnd: report.gameTimeEnd,
       realHoursElapsed: report.realHoursElapsed,
-      gameQuartersElapsed: report.gameQuartersElapsed,
       loansOriginated: report.loansOriginated,
       interestIncome: report.interestIncome,
       interestExpense: report.interestExpense,
@@ -272,7 +268,6 @@ async function createCollectionRecord(tx: any, bankId: string, now: Date, report
 async function createTransactions(
   tx: any,
   bankId: string,
-  now: Date,
   transactions: any[],
   loanBucketIdMap: Map<string, string>,
   depositBucketIdMap: Map<string, string>,
@@ -289,7 +284,6 @@ async function createTransactions(
       data: {
         bankId,
         timestamp: txn.timestamp,
-        collectedAt: now,
         type: txn.type,
         amount: txn.amount,
         loanBucketId,
@@ -419,21 +413,13 @@ export async function collectBank(bankId: string): Promise<CollectBankResult> {
       await createTransactions(
         tx,
         bank.id,
-        now,
         report.transactions,
         loanBucketIdMap,
         depositBucketIdMap,
       );
 
-      // Generate quarterly snapshots for any quarters crossed
-      const quartersCrossed = getQuartersCrossed(
-        report.gameTimeStart,
-        report.gameTimeEnd
-      );
-
-      for (const quarter of quartersCrossed) {
-        await generateQuarterlySnapshot(bank.id, quarter.quarterEnd, tx);
-      }
+      // Generate snapshot for this collection
+      await generateSnapshot(bank.id, now, report.realHoursElapsed, report, tx);
     });
   } catch (error) {
     if (

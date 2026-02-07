@@ -187,7 +187,7 @@ export const router = s.router(contract, {
       };
     },
     getFinancials: async ({ params, query }) => {
-      const result = await financialsLogic.getQuarterlySnapshots(
+      const result = await financialsLogic.getSnapshots(
         params.id,
         query
       );

@@ -42,7 +42,7 @@ model Bank {
   depositBuckets      DepositBucket[]
   transactions        Transaction[]
   collections         Collection[]
-  quarterlySnapshots  QuarterlySnapshot[]
+  snapshots           Snapshot[]
 
   @@index([currentEquity(sort: Desc)], name: "idx_banks_equity")
   @@index([currentLoans(sort: Desc)], name: "idx_banks_loans")
@@ -118,8 +118,7 @@ model DepositBucket {
 model Transaction {
   id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   bankId          String    @map("bank_id") @db.Uuid
-  timestamp       DateTime  @db.Timestamptz(6) // Game time
-  collectedAt     DateTime  @map("collected_at") @db.Timestamptz(6) // Real time of collection
+  timestamp       DateTime  @db.Timestamptz(6)
   type            String    @db.VarChar(30)
   amount          Decimal   @db.Decimal(18, 2) // Positive = inflow, Negative = outflow
   loanBucketId    String?   @map("loan_bucket_id") @db.Uuid
@@ -133,7 +132,6 @@ model Transaction {
 
   @@index([bankId, timestamp], name: "idx_transactions_bank")
   @@index([bankId, type], name: "idx_transactions_type")
-  @@index([collectedAt], name: "idx_transactions_collected")
   @@map("transactions")
 }
 
@@ -141,10 +139,7 @@ model Collection {
   id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   bankId               String   @map("bank_id") @db.Uuid
   collectedAt          DateTime @default(now()) @map("collected_at") @db.Timestamptz(6)
-  gameTimeStart        DateTime @map("game_time_start") @db.Timestamptz(6)
-  gameTimeEnd          DateTime @map("game_time_end") @db.Timestamptz(6)
   realHoursElapsed     Decimal  @map("real_hours_elapsed") @db.Decimal(10, 4)
-  gameQuartersElapsed  Decimal  @map("game_quarters_elapsed") @db.Decimal(10, 4)
   loansOriginated      Decimal  @map("loans_originated") @db.Decimal(18, 2)
   interestIncome       Decimal  @map("interest_income") @db.Decimal(18, 2)
   interestExpense      Decimal  @map("interest_expense") @db.Decimal(18, 2)
@@ -163,12 +158,10 @@ model Collection {
   @@map("collections")
 }
 
-model QuarterlySnapshot {
+model Snapshot {
   id                    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   bankId                String   @map("bank_id") @db.Uuid
-  quarterEnd            DateTime @map("quarter_end") @db.Date
-  fiscalYear            Int      @map("fiscal_year")
-  fiscalQuarter         Int      @map("fiscal_quarter")
+  periodEnd             DateTime @map("period_end") @db.Timestamptz(6)
 
   // Balance sheet
   totalAssets           Decimal  @map("total_assets") @db.Decimal(18, 2)
@@ -179,7 +172,7 @@ model QuarterlySnapshot {
   totalLiabilities      Decimal  @map("total_liabilities") @db.Decimal(18, 2)
   totalEquity           Decimal  @map("total_equity") @db.Decimal(18, 2)
 
-  // Income statement (for the quarter)
+  // Income statement (for the collection period)
   interestIncome        Decimal  @map("interest_income") @db.Decimal(18, 2)
   interestExpense       Decimal  @map("interest_expense") @db.Decimal(18, 2)
   netInterestIncome     Decimal  @map("net_interest_income") @db.Decimal(18, 2)
@@ -201,6 +194,6 @@ model QuarterlySnapshot {
 
   bank Bank @relation(fields: [bankId], references: [id], onDelete: Cascade)
 
-  @@unique([bankId, quarterEnd])
-  @@map("quarterly_snapshots")
+  @@unique([bankId, periodEnd])
+  @@map("snapshots")
 }

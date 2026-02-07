@@ -1,7 +1,6 @@
 /**
  * Collection Simulator
  * Orchestrates the entire game collection process
- * Based on design/architecture.md collection flow
  */
 
 import {
@@ -28,23 +27,8 @@ import type {
 /**
  * Simulate a collection period for a bank
  *
- * Steps:
- * 1. Calculate elapsed time (capped at 24 hours)
- * 2. Generate deterministic seed
- * 3. For each game hour/quarter:
- *    a. Calculate loan and deposit demand
- *    b. Allocate demand to risk classes
- *    c. Originate loans (if capital available)
- *    d. Process deposit inflows/outflows
- * 4. Calculate interest income and expense
- * 5. Roll defaults
- * 6. Calculate operating expenses
- * 7. Generate transaction records
- * 8. Update bank state
- * 9. Return collection report
- *
  * @param bankState - Current bank state
- * @param collectionTime - Time of collection
+ * @param collectionTime - Time of collection (real time)
  * @returns Collection report with all changes
  */
 export function simulateCollection(
@@ -59,7 +43,6 @@ export function simulateCollection(
     realMillisecondsElapsed / (1000 * 60 * 60),
     MAX_IDLE_HOURS
   )
-  const gameQuartersElapsed = realHoursElapsed // 1 real hour = 1 game quarter
 
   // 2. Generate deterministic seed
   const randomSeed = generateSeed(bankState.id, lastCollected)
@@ -70,7 +53,6 @@ export function simulateCollection(
   const newDepositBuckets: DepositBucketData[] = []
 
   // Use maps to track bucket updates, keyed by bucket ID
-  // This prevents duplicate updates and ensures all changes are merged
   const loanBucketUpdates = new Map<string, LoanBucketData>()
   const depositBucketUpdates = new Map<string, DepositBucketData>()
 
@@ -78,33 +60,26 @@ export function simulateCollection(
   let currentLoans = bankState.currentLoans
   let currentDeposits = bankState.currentDeposits
 
-  // Game time tracking
-  // Truncate to hour for bucket grouping (buckets are grouped by hour)
-  const gameTimeStart = new Date(lastCollected)
-  gameTimeStart.setMinutes(0, 0, 0) // Set minutes, seconds, milliseconds to 0
-  const gameTimeEnd = new Date(
-    gameTimeStart.getTime() + gameQuartersElapsed * 90 * 24 * 60 * 60 * 1000
-  )
+  // Truncate to hour for bucket grouping
+  const periodStart = new Date(collectionTime)
+  periodStart.setUTCMinutes(0, 0, 0)
 
   // 3. Simulate demand and originations
   const loanDemands = calculateAllLoanDemands(bankState.rates)
   const depositDemands = calculateAllDepositDemands(bankState.rates)
 
-  // Calculate total demand for the period
   let totalLoansOriginated = 0
 
   for (const demand of loanDemands) {
     const product = demand.product
     const productConfig = LOAN_PRODUCTS[product]
-    const totalDemandDollars = demand.hourlyDemand * gameQuartersElapsed
+    const totalDemandDollars = demand.hourlyDemand * realHoursElapsed
 
-    // Allocate to risk classes based on bank's allocation
     for (const [riskClass, allocationPct] of Object.entries(
       bankState.allocations
     )) {
       const allocatedDemand = totalDemandDollars * allocationPct
 
-      // Check if we have capital available
       const availableCapital =
         currentDeposits - currentLoans - currentDeposits * RESERVE_REQUIREMENT
       const actualLoanAmount = Math.min(
@@ -113,11 +88,10 @@ export function simulateCollection(
       )
 
       if (actualLoanAmount > 0) {
-        // Check if a bucket already exists for this product, risk class, and hour
         const existingBucket = bankState.loanBuckets.find(
           b => b.product === product &&
           b.riskClass === riskClass &&
-          b.originationHour.getTime() === gameTimeStart.getTime()
+          b.originationHour.getTime() === periodStart.getTime()
         )
 
         const loanCount = Math.max(
@@ -127,7 +101,6 @@ export function simulateCollection(
 
         let bucketId: string
         if (existingBucket) {
-          // Update existing bucket - merge with any prior updates in this collection
           bucketId = existingBucket.id
           const priorUpdate = loanBucketUpdates.get(bucketId) || existingBucket
 
@@ -140,14 +113,13 @@ export function simulateCollection(
           }
           loanBucketUpdates.set(bucketId, updatedBucket)
         } else {
-          // Create new bucket
-          bucketId = `new-${product}-${riskClass}-${gameTimeStart.toISOString()}`
+          bucketId = `new-${product}-${riskClass}-${periodStart.toISOString()}`
 
           const bucket: LoanBucketData = {
             id: bucketId,
             product,
             riskClass: riskClass as RiskClass,
-            originationHour: gameTimeStart,
+            originationHour: periodStart,
             originalPrincipal: actualLoanAmount,
             currentBalance: actualLoanAmount,
             interestRate: bankState.rates[product] || 0,
@@ -158,14 +130,13 @@ export function simulateCollection(
           newLoanBuckets.push(bucket)
         }
 
-        // Common updates for both paths
         currentLoans += actualLoanAmount
         totalLoansOriginated += actualLoanAmount
 
         transactions.push({
           type: 'loan_origination',
-          amount: -actualLoanAmount, // Negative = outflow
-          timestamp: gameTimeStart,
+          amount: -actualLoanAmount,
+          timestamp: collectionTime,
           loanBucketId: bucketId,
           details: { product, riskClass },
         })
@@ -176,18 +147,16 @@ export function simulateCollection(
   // Process deposit inflows
   for (const demand of depositDemands) {
     const product = demand.product
-    const totalInflowDollars = demand.hourlyDemand * gameQuartersElapsed
+    const totalInflowDollars = demand.hourlyDemand * realHoursElapsed
 
     if (totalInflowDollars > 0) {
-      // Check if a bucket already exists for this product and hour
       const existingBucket = bankState.depositBuckets.find(
         b => b.product === product &&
-        b.originationHour.getTime() === gameTimeStart.getTime()
+        b.originationHour.getTime() === periodStart.getTime()
       )
 
       let depositBucketId: string
       if (existingBucket) {
-        // Update existing bucket - merge with any prior updates in this collection
         depositBucketId = existingBucket.id
         const priorUpdate = depositBucketUpdates.get(depositBucketId) || existingBucket
 
@@ -198,13 +167,12 @@ export function simulateCollection(
         }
         depositBucketUpdates.set(depositBucketId, updatedBucket)
       } else {
-        // Create new bucket
-        depositBucketId = `new-deposit-${product}-${gameTimeStart.toISOString()}`
+        depositBucketId = `new-deposit-${product}-${periodStart.toISOString()}`
 
         const bucket: DepositBucketData = {
           id: depositBucketId,
           product,
-          originationHour: gameTimeStart,
+          originationHour: periodStart,
           originalAmount: totalInflowDollars,
           currentBalance: totalInflowDollars,
           interestRate: bankState.rates[product] || 0,
@@ -213,13 +181,12 @@ export function simulateCollection(
         newDepositBuckets.push(bucket)
       }
 
-      // Common updates for both paths
       currentDeposits += totalInflowDollars
 
       transactions.push({
         type: 'deposit_inflow',
-        amount: totalInflowDollars, // Positive = inflow
-        timestamp: gameTimeStart,
+        amount: totalInflowDollars,
+        timestamp: collectionTime,
         depositBucketId: depositBucketId,
         details: { product },
       })
@@ -233,22 +200,21 @@ export function simulateCollection(
   const interestResult = calculateInterest(
     allLoanBuckets,
     allDepositBuckets,
-    gameQuartersElapsed
+    realHoursElapsed
   )
 
-  // Record interest transactions
   transactions.push({
     type: 'interest_income',
     amount: interestResult.interestIncome,
-    timestamp: gameTimeEnd,
-    details: { gameQuartersElapsed },
+    timestamp: collectionTime,
+    details: { realHoursElapsed },
   })
 
   transactions.push({
     type: 'interest_expense',
-    amount: -interestResult.interestExpense, // Negative = outflow
-    timestamp: gameTimeEnd,
-    details: { gameQuartersElapsed },
+    amount: -interestResult.interestExpense,
+    timestamp: collectionTime,
+    details: { realHoursElapsed },
   })
 
   currentEquity += interestResult.netInterestIncome
@@ -260,7 +226,6 @@ export function simulateCollection(
     const isNewBucket = newDepositBuckets.some(b => b.id === bucketId)
 
     if (isExistingBucket) {
-      // Get the current state of the bucket (either from working map or original state)
       const currentBucket = depositBucketUpdates.get(bucketId) ||
         bankState.depositBuckets.find(b => b.id === bucketId)!
 
@@ -280,7 +245,7 @@ export function simulateCollection(
   // 5. Roll defaults
   const defaultResult = calculateDefaults(
     allLoanBuckets,
-    gameQuartersElapsed,
+    realHoursElapsed,
     randomSeed
   )
 
@@ -294,7 +259,6 @@ export function simulateCollection(
       const isNewBucket = newLoanBuckets.some(b => b.id === bucketId)
 
       if (isExistingBucket) {
-        // Get the current state of the bucket (either from working map or original state)
         const currentBucket = loanBucketUpdates.get(bucketId) ||
           bankState.loanBuckets.find(b => b.id === bucketId)!
 
@@ -314,9 +278,9 @@ export function simulateCollection(
     transactions.push({
       type: 'loan_default',
       amount: -defaultAmount,
-      timestamp: gameTimeEnd,
+      timestamp: collectionTime,
       loanBucketId: bucketId,
-      details: { gameQuartersElapsed },
+      details: { realHoursElapsed },
     })
 
     currentLoans -= defaultAmount
@@ -326,13 +290,13 @@ export function simulateCollection(
   // 6. Calculate operating expenses
   const totalAssets = currentLoans + (currentDeposits - currentLoans)
   const annualOpex = totalAssets * OPERATING_COST_RATE
-  const periodOpex = annualOpex * (gameQuartersElapsed / 4)
+  const periodOpex = annualOpex * (realHoursElapsed / 4)
 
   transactions.push({
     type: 'operating_expense',
-    amount: -periodOpex, // Negative = expense
-    timestamp: gameTimeEnd,
-    details: { totalAssets, gameQuartersElapsed },
+    amount: -periodOpex,
+    timestamp: collectionTime,
+    details: { totalAssets, realHoursElapsed },
   })
 
   currentEquity -= periodOpex
@@ -342,12 +306,10 @@ export function simulateCollection(
     interestResult.netInterestIncome - defaultResult.totalDefaults - periodOpex
 
   // 8. Build collection report
-  // Convert working maps to arrays for return
   const updatedLoanBuckets = Array.from(loanBucketUpdates.values())
   const updatedDepositBuckets = Array.from(depositBucketUpdates.values())
 
   // Calculate ending balances from actual bucket data to prevent drift
-  // Include: (1) new buckets, (2) updated buckets, (3) unchanged buckets
   const unchangedLoanBuckets = bankState.loanBuckets.filter(
     b => !loanBucketUpdates.has(b.id)
   )
@@ -367,10 +329,7 @@ export function simulateCollection(
   ].reduce((sum, b) => sum + b.currentBalance, 0)
 
   const report: CollectionReport = {
-    gameTimeStart,
-    gameTimeEnd,
     realHoursElapsed,
-    gameQuartersElapsed,
     loansOriginated: totalLoansOriginated,
     interestIncome: interestResult.interestIncome,
     interestExpense: interestResult.interestExpense,

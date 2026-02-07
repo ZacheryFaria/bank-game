@@ -1,6 +1,6 @@
 import type {
   Bank,
-  QuarterlySnapshot,
+  Snapshot,
   BankRate,
   BankAllocation,
   LoanBucket,
@@ -74,7 +74,7 @@ export function convertAllocationDecimals(allocations: any[]): any[] {
   }));
 }
 
-export function convertSnapshotDecimals(snapshot: QuarterlySnapshot): any {
+export function convertSnapshotDecimals(snapshot: Snapshot): any {
   const portfolioByProduct = snapshot.portfolioByProduct as Record<string, number> | null;
   const portfolioByRiskClass = snapshot.portfolioByRiskClass as Record<string, number> | null;
 
