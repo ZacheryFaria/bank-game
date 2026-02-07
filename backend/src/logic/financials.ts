@@ -29,19 +29,16 @@ export async function getSnapshots(
   const where: Prisma.SnapshotWhereInput = { bankId };
 
   if (filters?.startDate || filters?.endDate) {
-    where.periodEnd = {};
-    if (filters.startDate) {
-      (where.periodEnd as Prisma.DateTimeFilter).gte = new Date(filters.startDate);
-    }
-    if (filters.endDate) {
-      (where.periodEnd as Prisma.DateTimeFilter).lte = new Date(filters.endDate);
-    }
+    where.periodEnd = {
+      ...(filters.startDate && { gte: new Date(filters.startDate) }),
+      ...(filters.endDate && { lte: new Date(filters.endDate) }),
+    };
   }
 
   const snapshots = await prisma.snapshot.findMany({
     where,
     orderBy: { periodEnd: "desc" },
-    take: filters?.limit || DEFAULT_SNAPSHOT_LIMIT,
+    take: Math.min(filters?.limit || DEFAULT_SNAPSHOT_LIMIT, 1000),
   });
 
   const convertedSnapshots = snapshots.map(convertSnapshotDecimals);

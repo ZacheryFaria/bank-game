@@ -114,7 +114,8 @@ export async function generateSnapshot(
   const cashAndReserves = totalAssets - totalLoans - loanLossReserve;
 
   // 4. Calculate key ratios (annualized dynamically based on collection period)
-  const annualizationFactor = realHoursElapsed > 0 ? 4 / realHoursElapsed : 0;
+  // Cap at 4 (minimum 1-hour period) to prevent DECIMAL(5,4) overflow
+  const annualizationFactor = realHoursElapsed >= 1 ? 4 / realHoursElapsed : 4;
 
   const capitalRatio = totalAssets > 0 ? totalEquity / totalAssets : 0;
 

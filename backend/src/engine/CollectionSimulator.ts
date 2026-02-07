@@ -135,7 +135,7 @@ export function simulateCollection(
 
         transactions.push({
           type: 'loan_origination',
-          amount: -actualLoanAmount,
+          amount: -actualLoanAmount, // Negative = outflow
           timestamp: collectionTime,
           loanBucketId: bucketId,
           details: { product, riskClass },
@@ -185,7 +185,7 @@ export function simulateCollection(
 
       transactions.push({
         type: 'deposit_inflow',
-        amount: totalInflowDollars,
+        amount: totalInflowDollars, // Positive = inflow
         timestamp: collectionTime,
         depositBucketId: depositBucketId,
         details: { product },
@@ -212,7 +212,7 @@ export function simulateCollection(
 
   transactions.push({
     type: 'interest_expense',
-    amount: -interestResult.interestExpense,
+    amount: -interestResult.interestExpense, // Negative = outflow
     timestamp: collectionTime,
     details: { realHoursElapsed },
   })
@@ -294,7 +294,7 @@ export function simulateCollection(
 
   transactions.push({
     type: 'operating_expense',
-    amount: -periodOpex,
+    amount: -periodOpex, // Negative = expense
     timestamp: collectionTime,
     details: { totalAssets, realHoursElapsed },
   })

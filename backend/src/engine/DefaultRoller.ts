@@ -47,7 +47,7 @@ class SeededRandom {
  *   actualDefaults = expectedDefaults * randomVariance(0.8, 1.2)
  *
  * @param bucket - Loan bucket data
- * @param realHoursElapsed - Number of game quarters elapsed
+ * @param realHoursElapsed - Number of real hours elapsed (1 hour = 1 quarter for rate math)
  * @param rng - Seeded random number generator
  * @returns Default amount for this bucket
  */
@@ -78,7 +78,7 @@ function calculateBucketDefaults(
  * Calculate defaults across all loan buckets
  *
  * @param loanBuckets - Array of loan buckets
- * @param realHoursElapsed - Number of game quarters elapsed
+ * @param realHoursElapsed - Number of real hours elapsed (1 hour = 1 quarter for rate math)
  * @param seed - Random seed for deterministic results
  * @returns Default result with totals and per-bucket breakdown
  */

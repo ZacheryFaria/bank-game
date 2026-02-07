@@ -383,9 +383,9 @@ export const contract = c.router({
         id: z.string(),
       }),
       query: z.object({
-        startDate: z.string().optional(),
-        endDate: z.string().optional(),
-        limit: z.coerce.number().optional(),
+        startDate: z.string().datetime().optional(),
+        endDate: z.string().datetime().optional(),
+        limit: z.coerce.number().min(1).max(1000).optional(),
       }),
       summary: "Get financial statement snapshots",
     },

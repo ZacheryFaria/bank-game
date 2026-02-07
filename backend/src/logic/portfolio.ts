@@ -50,12 +50,15 @@ export async function getPortfolioHistory(
 
   const periodStart = getPeriodStartDate(filters?.period || "30d");
 
+  const MAX_PORTFOLIO_SNAPSHOTS = 1000;
+
   const snapshots = await prisma.snapshot.findMany({
     where: {
       bankId,
       ...(periodStart && { periodEnd: { gte: periodStart } }),
     },
     orderBy: { periodEnd: "desc" },
+    take: MAX_PORTFOLIO_SNAPSHOTS,
   });
 
   // Reverse to chronological order for charting
