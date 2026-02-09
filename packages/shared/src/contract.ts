@@ -181,8 +181,8 @@ const MarketRatesSchema = z.object({
 
 const TransactionQuerySchema = z.object({
   type: z.string().optional(),
-  page: z.coerce.number().optional(),
-  limit: z.coerce.number().min(1).max(100).optional(),
+  page: z.coerce.number().int().min(1).optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
 });
 
 const TransactionListItemSchema = z.object({

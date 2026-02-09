@@ -378,12 +378,14 @@ export function Dashboard() {
       });
     }
 
-    // Group by hour: take the last (most recent) snapshot per hour
+    // Group by hour: keep the latest (most recent) snapshot per hour
     const byHour = new Map<number, typeof portfolioHistory.dataPoints[number]>();
     for (const point of portfolioHistory.dataPoints) {
       const date = new Date(point.timestamp);
       const hourKey = new Date(date.getFullYear(), date.getMonth(), date.getDate(), date.getHours()).getTime();
-      byHour.set(hourKey, point);
+      if (!byHour.has(hourKey)) {
+        byHour.set(hourKey, point);
+      }
     }
 
     return Array.from(byHour.entries())
@@ -431,12 +433,14 @@ export function Dashboard() {
       });
     }
 
-    // Group by hour for longer periods
+    // Group by hour for longer periods — keep the latest snapshot per hour
     const byHour = new Map<number, typeof financialSnapshots[number]>();
     for (const s of filtered) {
       const date = new Date(s.periodEnd);
       const hourKey = new Date(date.getFullYear(), date.getMonth(), date.getDate(), date.getHours()).getTime();
-      byHour.set(hourKey, s);
+      if (!byHour.has(hourKey)) {
+        byHour.set(hourKey, s);
+      }
     }
 
     return Array.from(byHour.entries())
