@@ -31,6 +31,9 @@ import { z } from "zod";
 type BankRate = z.infer<typeof BankRateSchema>;
 type BankAllocation = z.infer<typeof BankAllocationSchema>;
 
+// $100k * (rate% / 100) / 4 quarters = rate * 250
+const BASE_HOURLY_PER_100K = 250;
+
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -113,6 +116,8 @@ export function Dashboard() {
       return response.body;
     },
   });
+
+  const hourlyPer100k = BASE_HOURLY_PER_100K * (marketData?.timeMultiplier ?? 1);
 
   // Individual rate state for all 6 products (stored as percentages for UI)
   const [rates, setRates] = useState({
@@ -629,7 +634,7 @@ export function Dashboard() {
                       <span>15%</span>
                     </div>
                     <div className="text-xs text-bloomberg-green mt-1 font-mono">
-                      Earns {formatCurrency(rates.mortgage * 250)}/hr per $100k
+                      Earns {formatCurrency(rates.mortgage * hourlyPer100k)}/hr per $100k
                     </div>
                   </div>
 
@@ -662,7 +667,7 @@ export function Dashboard() {
                       <span>20%</span>
                     </div>
                     <div className="text-xs text-bloomberg-green mt-1 font-mono">
-                      Earns {formatCurrency(rates.auto * 250)}/hr per $100k
+                      Earns {formatCurrency(rates.auto * hourlyPer100k)}/hr per $100k
                     </div>
                   </div>
 
@@ -695,7 +700,7 @@ export function Dashboard() {
                       <span>30%</span>
                     </div>
                     <div className="text-xs text-bloomberg-green mt-1 font-mono">
-                      Earns {formatCurrency(rates.personal * 250)}/hr per $100k
+                      Earns {formatCurrency(rates.personal * hourlyPer100k)}/hr per $100k
                     </div>
                   </div>
 
@@ -728,7 +733,7 @@ export function Dashboard() {
                       <span>40%</span>
                     </div>
                     <div className="text-xs text-bloomberg-green mt-1 font-mono">
-                      Earns {formatCurrency(rates.credit_card * 250)}/hr per $100k
+                      Earns {formatCurrency(rates.credit_card * hourlyPer100k)}/hr per $100k
                     </div>
                   </div>
                 </div>
@@ -766,7 +771,7 @@ export function Dashboard() {
                       <span>10%</span>
                     </div>
                     <div className="text-xs text-bloomberg-red mt-1 font-mono">
-                      Costs {formatCurrency(rates.savings * 250)}/hr per $100k
+                      Costs {formatCurrency(rates.savings * hourlyPer100k)}/hr per $100k
                     </div>
                   </div>
 
@@ -799,7 +804,7 @@ export function Dashboard() {
                       <span>10%</span>
                     </div>
                     <div className="text-xs text-bloomberg-red mt-1 font-mono">
-                      Costs {formatCurrency(rates.cd * 250)}/hr per $100k
+                      Costs {formatCurrency(rates.cd * hourlyPer100k)}/hr per $100k
                     </div>
                   </div>
 
