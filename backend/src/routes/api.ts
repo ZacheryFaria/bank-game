@@ -79,6 +79,10 @@ export const router = s.router(contract, {
           return { status: 404, body: { error: result.error } };
       }
     },
+    transactions: async ({ query, request }) => {
+      const result = await bankLogic.getTransactions(request.bank!.id, query);
+      return { status: 200, body: result };
+    },
     portfolioHistory: async ({ query, request }) => {
       const result = await portfolioLogic.getPortfolioHistory(
         request.bank!.id,

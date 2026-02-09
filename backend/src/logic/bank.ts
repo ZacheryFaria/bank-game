@@ -294,6 +294,64 @@ async function createTransactions(
   }
 }
 
+export async function getTransactions(
+  bankId: string,
+  filters: { type?: string; page?: number; limit?: number },
+) {
+  const page = filters.page ?? 1;
+  const limit = filters.limit ?? 50;
+  const skip = (page - 1) * limit;
+
+  const where: { bankId: string; type?: string } = { bankId };
+  if (filters.type) {
+    where.type = filters.type;
+  }
+
+  const [transactions, total, summaryRaw] = await Promise.all([
+    prisma.transaction.findMany({
+      where,
+      orderBy: { timestamp: "desc" },
+      skip,
+      take: limit,
+      select: {
+        id: true,
+        timestamp: true,
+        type: true,
+        amount: true,
+        loanBucketId: true,
+        depositBucketId: true,
+        details: true,
+      },
+    }),
+    prisma.transaction.count({ where }),
+    prisma.transaction.groupBy({
+      by: ["type"],
+      where: { bankId },
+      _sum: { amount: true },
+      _count: true,
+    }),
+  ]);
+
+  return {
+    transactions: transactions.map((t) => ({
+      ...t,
+      amount: Number(t.amount),
+      details: (t.details as Record<string, unknown> | null) ?? null,
+    })),
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+    summary: summaryRaw.map((s) => ({
+      type: s.type,
+      total: Number(s._sum.amount ?? 0),
+      count: s._count,
+    })),
+  };
+}
+
 export async function collectBank(bankId: string): Promise<CollectBankResult> {
   const bank = await prisma.bank.findUnique({
     where: { id: bankId },
