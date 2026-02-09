@@ -134,13 +134,25 @@ export function Dashboard() {
   // Transaction ledger state
   const [txnTypeFilter, setTxnTypeFilter] = useState<string | undefined>(undefined);
   const [txnPage, setTxnPage] = useState(1);
+  const [txnSortField, setTxnSortField] = useState<'timestamp' | 'type' | 'count' | 'amount'>('timestamp');
+  const [txnSortDir, setTxnSortDir] = useState<'asc' | 'desc'>('desc');
+  const toggleTxnSort = (field: typeof txnSortField) => {
+    if (txnSortField === field) {
+      setTxnSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setTxnSortField(field);
+      setTxnSortDir(field === 'timestamp' ? 'desc' : 'asc');
+    }
+  };
+  const sortIndicator = (field: typeof txnSortField) =>
+    txnSortField === field ? (txnSortDir === 'asc' ? ' \u25B2' : ' \u25BC') : '';
   const { data: txnData, isLoading: isTxnLoading } = useTransactions({
     type: txnTypeFilter,
     page: txnPage,
     limit: 50,
   });
 
-  // Group transactions that share the same timestamp and type into single rows
+  // Group transactions that share the same timestamp and type, then sort
   const groupedTransactions = useMemo(() => {
     if (!txnData?.transactions) return [];
 
@@ -156,8 +168,19 @@ export function Dashboard() {
         groups.set(groupKey, { key: groupKey, timestamp: ts, type: txn.type, amount: txn.amount, count: 1 });
       }
     }
-    return Array.from(groups.values());
-  }, [txnData?.transactions]);
+
+    const rows = Array.from(groups.values());
+    const dir = txnSortDir === 'asc' ? 1 : -1;
+    rows.sort((a, b) => {
+      switch (txnSortField) {
+        case 'timestamp': return dir * (new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+        case 'type': return dir * a.type.localeCompare(b.type);
+        case 'count': return dir * (a.count - b.count);
+        case 'amount': return dir * (a.amount - b.amount);
+      }
+    });
+    return rows;
+  }, [txnData?.transactions, txnSortField, txnSortDir]);
 
   // Initialize rates from bank data when available
   useEffect(() => {
@@ -1274,10 +1297,18 @@ export function Dashboard() {
                     <DataGrid>
                       <DataGridHeader>
                         <tr>
-                          <DataGridHead>Timestamp</DataGridHead>
-                          <DataGridHead>Type</DataGridHead>
-                          <DataGridHead className="text-right">Count</DataGridHead>
-                          <DataGridHead className="text-right">Amount</DataGridHead>
+                          <DataGridHead className="cursor-pointer select-none" onClick={() => toggleTxnSort('timestamp')}>
+                            Timestamp{sortIndicator('timestamp')}
+                          </DataGridHead>
+                          <DataGridHead className="cursor-pointer select-none" onClick={() => toggleTxnSort('type')}>
+                            Type{sortIndicator('type')}
+                          </DataGridHead>
+                          <DataGridHead className="text-right cursor-pointer select-none" onClick={() => toggleTxnSort('count')}>
+                            Count{sortIndicator('count')}
+                          </DataGridHead>
+                          <DataGridHead className="text-right cursor-pointer select-none" onClick={() => toggleTxnSort('amount')}>
+                            Amount{sortIndicator('amount')}
+                          </DataGridHead>
                         </tr>
                       </DataGridHeader>
                       <DataGridBody>
