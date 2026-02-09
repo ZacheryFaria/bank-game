@@ -5,6 +5,7 @@
 
 import {
   MAX_IDLE_HOURS,
+  TIME_MULTIPLIER,
   RESERVE_REQUIREMENT,
   OPERATING_COST_RATE,
   LOAN_PRODUCTS,
@@ -43,6 +44,7 @@ export function simulateCollection(
     realMillisecondsElapsed / (1000 * 60 * 60),
     MAX_IDLE_HOURS
   )
+  const effectiveHours = realHoursElapsed * TIME_MULTIPLIER
 
   // 2. Generate deterministic seed
   const randomSeed = generateSeed(bankState.id, lastCollected)
@@ -73,7 +75,7 @@ export function simulateCollection(
   for (const demand of loanDemands) {
     const product = demand.product
     const productConfig = LOAN_PRODUCTS[product]
-    const totalDemandDollars = demand.hourlyDemand * realHoursElapsed
+    const totalDemandDollars = demand.hourlyDemand * effectiveHours
 
     for (const [riskClass, allocationPct] of Object.entries(
       bankState.allocations
@@ -147,7 +149,7 @@ export function simulateCollection(
   // Process deposit inflows
   for (const demand of depositDemands) {
     const product = demand.product
-    const totalInflowDollars = demand.hourlyDemand * realHoursElapsed
+    const totalInflowDollars = demand.hourlyDemand * effectiveHours
 
     if (totalInflowDollars > 0) {
       const existingBucket = bankState.depositBuckets.find(
@@ -200,7 +202,7 @@ export function simulateCollection(
   const interestResult = calculateInterest(
     allLoanBuckets,
     allDepositBuckets,
-    realHoursElapsed
+    effectiveHours
   )
 
   transactions.push({
@@ -245,7 +247,7 @@ export function simulateCollection(
   // 5. Roll defaults
   const defaultResult = calculateDefaults(
     allLoanBuckets,
-    realHoursElapsed,
+    effectiveHours,
     randomSeed
   )
 
@@ -290,7 +292,7 @@ export function simulateCollection(
   // 6. Calculate operating expenses
   const totalAssets = currentLoans + (currentDeposits - currentLoans)
   const annualOpex = totalAssets * OPERATING_COST_RATE
-  const periodOpex = annualOpex * (realHoursElapsed / 4)
+  const periodOpex = annualOpex * (effectiveHours / 4)
 
   transactions.push({
     type: 'operating_expense',
