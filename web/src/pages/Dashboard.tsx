@@ -1532,7 +1532,7 @@ export function Dashboard() {
                   />
                   <StatCard
                     label="Total Transactions"
-                    value={txnData.pagination.total}
+                    value={txnData.summary.reduce((sum, s) => sum + s.count, 0)}
                     format="number"
                     size="sm"
                   />
@@ -1552,6 +1552,7 @@ export function Dashboard() {
                     </DataGridHeader>
                     <DataGridBody>
                       {txnData.summary
+                        .slice()
                         .sort((a, b) => Math.abs(b.total) - Math.abs(a.total))
                         .map((s) => (
                           <DataGridRow key={s.type}>
@@ -1586,12 +1587,11 @@ export function Dashboard() {
                   className="bg-secondary text-foreground text-xs font-mono border border-border px-2 py-1 rounded"
                 >
                   <option value="">All Types</option>
-                  <option value="loan_origination">Loan Origination</option>
-                  <option value="deposit_inflow">Deposit Inflow</option>
-                  <option value="interest_income">Interest Income</option>
-                  <option value="interest_expense">Interest Expense</option>
-                  <option value="loan_default">Loan Default</option>
-                  <option value="operating_expense">Operating Expense</option>
+                  {txnData?.summary?.map((s) => (
+                    <option key={s.type} value={s.type}>
+                      {formatStringWithSeparator(s.type, ' ')}
+                    </option>
+                  ))}
                 </select>
               </div>
 
