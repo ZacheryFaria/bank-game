@@ -4,6 +4,7 @@ import { useMatch, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useBank } from "@/hooks/useBank";
 import { usePortfolioHistory } from "@/hooks/usePortfolioHistory";
+import { useTransactions } from "@/hooks/useTransactions";
 import { apiClient } from "@/lib/api";
 import {
   BloombergLayout,
@@ -101,6 +102,7 @@ export function Dashboard() {
   const navigate = useNavigate();
   const isRatesTab = useMatch('/dashboard/rates');
   const isPortfolioTab = useMatch('/dashboard/portfolio');
+  const isLedgerTab = useMatch('/dashboard/ledger');
 
   // Fetch market rates for reference
   const { data: marketData } = useQuery({
@@ -129,6 +131,50 @@ export function Dashboard() {
   const [historyMetric, setHistoryMetric] = useState<"equity" | "loans" | "deposits">("equity");
   const { data: portfolioHistory, isLoading: isHistoryLoading } = usePortfolioHistory({ period: historyPeriod });
 
+  // Transaction ledger state
+  const [txnTypeFilter, setTxnTypeFilter] = useState<string | undefined>(undefined);
+  const [txnPage, setTxnPage] = useState(1);
+  const { data: txnData, isLoading: isTxnLoading } = useTransactions({
+    type: txnTypeFilter,
+    page: txnPage,
+    limit: 50,
+  });
+
+  // Group transactions that share the same timestamp and type, then sort
+  const groupedTransactions = useMemo(() => {
+    if (!txnData?.transactions) return [];
+
+    const groups = new Map<string, { key: string; timestamp: string; type: string; amount: number; count: number }>();
+    for (const txn of txnData.transactions) {
+      const ts = new Date(txn.timestamp).toISOString();
+      const groupKey = `${ts}|${txn.type}`;
+      const existing = groups.get(groupKey);
+      if (existing) {
+        existing.amount += txn.amount;
+        existing.count += 1;
+      } else {
+        groups.set(groupKey, { key: groupKey, timestamp: ts, type: txn.type, amount: txn.amount, count: 1 });
+      }
+    }
+
+    const typeOrder: Record<string, number> = {
+      deposit_inflow: 0,
+      loan_origination: 1,
+      interest_income: 2,
+      interest_expense: 3,
+      loan_default: 4,
+      operating_expense: 5,
+    };
+
+    const rows = Array.from(groups.values());
+    rows.sort((a, b) => {
+      const timeDiff = new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+      if (timeDiff !== 0) return timeDiff;
+      return (typeOrder[a.type] ?? 99) - (typeOrder[b.type] ?? 99);
+    });
+    return rows;
+  }, [txnData?.transactions]);
+
   // Initialize rates from bank data when available
   useEffect(() => {
     if (bank?.rates && bank.rates.length > 0) {
@@ -140,7 +186,7 @@ export function Dashboard() {
     }
   }, [bank?.rates]);
 
-  const activeTab = isPortfolioTab ? 'portfolio' : isRatesTab ? 'rates' : 'overview';
+  const activeTab = isLedgerTab ? 'ledger' : isPortfolioTab ? 'portfolio' : isRatesTab ? 'rates' : 'overview';
 
   const handleTabChange = (value: string) => {
     navigate(`/dashboard/${value}`);
@@ -423,6 +469,12 @@ export function Dashboard() {
                 className="data-[state=active]:bg-transparent data-[state=active]:text-bloomberg-amber data-[state=active]:border-b-2 data-[state=active]:border-bloomberg-amber rounded-none px-4 py-2 text-sm font-mono uppercase"
               >
                 Portfolio
+              </TabsTrigger>
+              <TabsTrigger
+                value="ledger"
+                className="data-[state=active]:bg-transparent data-[state=active]:text-bloomberg-amber data-[state=active]:border-b-2 data-[state=active]:border-bloomberg-amber rounded-none px-4 py-2 text-sm font-mono uppercase"
+              >
+                Ledger
               </TabsTrigger>
             </TabsList>
           </div>
@@ -1133,6 +1185,171 @@ export function Dashboard() {
                 </div>
               </TabsContent>
             </Tabs>
+          </TabsContent>
+          <TabsContent value="ledger" className="flex-1 m-0 overflow-auto">
+            <div className="p-4 space-y-4">
+              {/* Summary bar */}
+              {txnData?.summary && txnData.summary.length > 0 && (
+                <div className="grid grid-cols-3 gap-px bg-border">
+                  <StatCard
+                    label="Total Inflows"
+                    value={txnData.summary
+                      .filter((s) => s.total > 0)
+                      .reduce((sum, s) => sum + s.total, 0)}
+                    format="currency"
+                    prefix="$"
+                    size="sm"
+                  />
+                  <StatCard
+                    label="Total Outflows"
+                    value={Math.abs(
+                      txnData.summary
+                        .filter((s) => s.total < 0)
+                        .reduce((sum, s) => sum + s.total, 0),
+                    )}
+                    format="currency"
+                    prefix="$"
+                    size="sm"
+                  />
+                  <StatCard
+                    label="Total Transactions"
+                    value={txnData.summary.reduce((sum, s) => sum + s.count, 0)}
+                    format="number"
+                    size="sm"
+                  />
+                </div>
+              )}
+
+              {/* Summary by type */}
+              {txnData?.summary && txnData.summary.length > 0 && (
+                <Panel title="SUMMARY BY TYPE" headerColor="amber">
+                  <DataGrid>
+                    <DataGridHeader>
+                      <tr>
+                        <DataGridHead>Type</DataGridHead>
+                        <DataGridHead className="text-right">Count</DataGridHead>
+                        <DataGridHead className="text-right">Total</DataGridHead>
+                      </tr>
+                    </DataGridHeader>
+                    <DataGridBody>
+                      {txnData.summary
+                        .slice()
+                        .sort((a, b) => Math.abs(b.total) - Math.abs(a.total))
+                        .map((s) => (
+                          <DataGridRow key={s.type}>
+                            <DataGridCell variant="highlight">
+                              {formatStringWithSeparator(s.type, ' ')}
+                            </DataGridCell>
+                            <DataGridCell numeric>{s.count}</DataGridCell>
+                            <DataGridCell
+                              numeric
+                              variant={s.total > 0 ? "positive" : "negative"}
+                            >
+                              {s.total > 0 ? '+' : ''}{formatCurrency(s.total)}
+                            </DataGridCell>
+                          </DataGridRow>
+                        ))}
+                    </DataGridBody>
+                  </DataGrid>
+                </Panel>
+              )}
+
+              {/* Type filter */}
+              <div className="flex items-center gap-3">
+                <span className="text-xs uppercase text-muted-foreground font-mono">
+                  Filter by type:
+                </span>
+                <select
+                  value={txnTypeFilter ?? ""}
+                  onChange={(e) => {
+                    setTxnTypeFilter(e.target.value || undefined);
+                    setTxnPage(1);
+                  }}
+                  className="bg-secondary text-foreground text-xs font-mono border border-border px-2 py-1 rounded"
+                >
+                  <option value="">All Types</option>
+                  {txnData?.summary?.map((s) => (
+                    <option key={s.type} value={s.type}>
+                      {formatStringWithSeparator(s.type, ' ')}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <Panel title="TRANSACTION LEDGER" headerColor="cyan">
+                {isTxnLoading ? (
+                  <div className="text-center py-8 text-muted-foreground font-mono">
+                    Loading transactions...
+                  </div>
+                ) : !txnData || txnData.transactions.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No transactions found. Collect to generate transactions.
+                  </div>
+                ) : (
+                  <>
+                    <DataGrid>
+                      <DataGridHeader>
+                        <tr>
+                          <DataGridHead>Timestamp</DataGridHead>
+                          <DataGridHead>Type</DataGridHead>
+                          <DataGridHead className="text-right">Count</DataGridHead>
+                          <DataGridHead className="text-right">Amount</DataGridHead>
+                        </tr>
+                      </DataGridHeader>
+                      <DataGridBody>
+                        {groupedTransactions.map((row) => (
+                          <DataGridRow key={row.key}>
+                            <DataGridCell>
+                              {new Date(row.timestamp).toLocaleString()}
+                            </DataGridCell>
+                            <DataGridCell variant="highlight">
+                              {formatStringWithSeparator(row.type, ' ')}
+                            </DataGridCell>
+                            <DataGridCell numeric>
+                              {row.count > 1 ? row.count : ''}
+                            </DataGridCell>
+                            <DataGridCell
+                              numeric
+                              variant={row.amount > 0 ? "positive" : "negative"}
+                            >
+                              {row.amount > 0 ? '+' : ''}{formatCurrency(row.amount)}
+                            </DataGridCell>
+                          </DataGridRow>
+                        ))}
+                      </DataGridBody>
+                    </DataGrid>
+
+                    {/* Pagination */}
+                    <div className="flex items-center justify-between mt-4 px-2">
+                      <span className="text-xs text-muted-foreground font-mono">
+                        Page {txnData.pagination.page} of {txnData.pagination.totalPages}
+                        {' '}({txnData.pagination.total} total)
+                      </span>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={txnPage <= 1}
+                          onClick={() => setTxnPage((p) => p - 1)}
+                          className="font-mono text-xs"
+                        >
+                          Prev
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={txnPage >= txnData.pagination.totalPages}
+                          onClick={() => setTxnPage((p) => p + 1)}
+                          className="font-mono text-xs"
+                        >
+                          Next
+                        </Button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </Panel>
+            </div>
           </TabsContent>
         </Tabs>
       </BloombergMain>

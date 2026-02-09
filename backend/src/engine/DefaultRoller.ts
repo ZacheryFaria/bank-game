@@ -101,7 +101,7 @@ export function calculateDefaults(
   for (const bucket of loanBuckets) {
     const defaultAmount = calculateBucketDefaults(bucket, realHoursElapsed, rng)
 
-    if (defaultAmount > 0) {
+    if (defaultAmount >= 0.01) {
       totalDefaults += defaultAmount
       defaultsByBucket.set(bucket.id, defaultAmount)
 

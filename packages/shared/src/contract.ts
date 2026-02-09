@@ -178,6 +178,34 @@ const MarketRatesSchema = z.object({
   depositProducts: z.array(DepositProductInfoSchema),
 });
 
+const TransactionQuerySchema = z.object({
+  type: z.string().optional(),
+  page: z.coerce.number().optional(),
+  limit: z.coerce.number().min(1).max(100).optional(),
+});
+
+const TransactionListItemSchema = z.object({
+  id: z.string(),
+  timestamp: z.coerce.date(),
+  type: z.string(),
+  amount: z.number(),
+  loanBucketId: z.string().nullable().optional(),
+  depositBucketId: z.string().nullable().optional(),
+  details: z.record(z.string(), z.unknown()).nullable().optional(),
+});
+
+const TransactionSummarySchema = z.object({
+  type: z.string(),
+  total: z.number(),
+  count: z.number(),
+});
+
+const TransactionListResponseSchema = z.object({
+  transactions: z.array(TransactionListItemSchema),
+  pagination: PaginationSchema,
+  summary: z.array(TransactionSummarySchema),
+});
+
 // Export schemas for reuse
 export { BankRateSchema, BankAllocationSchema, BankSchema, UserSchema, CollectionReportSchema, DepositBucketSchema };
 
@@ -328,6 +356,17 @@ export const contract = c.router({
       query: PortfolioHistoryQuerySchema,
       metadata: { requiresAuth: true } as RouteMetadata,
       summary: "Get historical portfolio data for charting",
+    },
+    transactions: {
+      method: "GET",
+      path: "/api/bank/transactions",
+      responses: {
+        200: TransactionListResponseSchema,
+        404: z.object({ error: z.string() }),
+      },
+      query: TransactionQuerySchema,
+      metadata: { requiresAuth: true } as RouteMetadata,
+      summary: "Get transaction ledger with optional type filter",
     },
   },
   banks: {
