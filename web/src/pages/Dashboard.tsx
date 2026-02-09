@@ -4,6 +4,7 @@ import { useMatch, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useBank } from "@/hooks/useBank";
 import { usePortfolioHistory } from "@/hooks/usePortfolioHistory";
+import { useFinancials } from "@/hooks/useFinancials";
 import { useTransactions } from "@/hooks/useTransactions";
 import { apiClient } from "@/lib/api";
 import {
@@ -99,6 +100,32 @@ type DepositDistribution = {
   bucketCount: number;
 };
 
+const periodToMs: Record<string, number | undefined> = {
+  "1h": 1 * 60 * 60 * 1000,
+  "12h": 12 * 60 * 60 * 1000,
+  "1d": 24 * 60 * 60 * 1000,
+  "7d": 7 * 24 * 60 * 60 * 1000,
+  "30d": 30 * 24 * 60 * 60 * 1000,
+  "90d": 90 * 24 * 60 * 60 * 1000,
+  "1y": 365 * 24 * 60 * 60 * 1000,
+};
+
+type PnlRateView = "day" | "week" | "month" | "year";
+
+const pnlWindowMs: Record<PnlRateView, number> = {
+  day: 24 * 60 * 60 * 1000,
+  week: 7 * 24 * 60 * 60 * 1000,
+  month: 30 * 24 * 60 * 60 * 1000,
+  year: 365 * 24 * 60 * 60 * 1000,
+};
+
+const pnlWindowLabel: Record<PnlRateView, string> = {
+  day: "Last 24h",
+  week: "Last 7d",
+  month: "Last 30d",
+  year: "Last 365d",
+};
+
 export function Dashboard() {
   const { user, logout } = useAuth();
   const { bank, isLoading, collect, isCollecting, updateRates } = useBank();
@@ -135,6 +162,14 @@ export function Dashboard() {
   const [historyPeriod, setHistoryPeriod] = useState<"1h" | "12h" | "1d" | "7d" | "30d" | "90d" | "1y" | "all">("1h");
   const [historyMetric, setHistoryMetric] = useState<"equity" | "loans" | "deposits">("equity");
   const { data: portfolioHistory, isLoading: isHistoryLoading } = usePortfolioHistory({ period: historyPeriod });
+
+  // P&L chart state
+  type PnlMetric = "netIncome" | "interestIncome" | "interestExpense" | "provisionForLosses" | "operatingExpenses";
+  const [pnlPeriod, setPnlPeriod] = useState<"1h" | "12h" | "1d" | "7d" | "30d" | "90d" | "1y" | "all">("1h");
+  const [pnlMetric, setPnlMetric] = useState<PnlMetric>("netIncome");
+  const { data: financialSnapshots, isLoading: isFinancialsLoading } = useFinancials({
+    bankId: bank?.id ?? "",
+  });
 
   // Transaction ledger state
   const [txnTypeFilter, setTxnTypeFilter] = useState<string | undefined>(undefined);
@@ -321,16 +356,6 @@ export function Dashboard() {
     }, { balance: 0, bucketCount: 0 });
   }, [depositDistribution]);
 
-  const periodToMs: Record<string, number | undefined> = {
-    "1h": 1 * 60 * 60 * 1000,
-    "12h": 12 * 60 * 60 * 1000,
-    "1d": 24 * 60 * 60 * 1000,
-    "7d": 7 * 24 * 60 * 60 * 1000,
-    "30d": 30 * 24 * 60 * 60 * 1000,
-    "90d": 90 * 24 * 60 * 60 * 1000,
-    "1y": 365 * 24 * 60 * 60 * 1000,
-  };
-
   const chartData = useMemo(() => {
     if (!portfolioHistory?.dataPoints) return [];
 
@@ -353,12 +378,14 @@ export function Dashboard() {
       });
     }
 
-    // Group by hour: take the last (most recent) snapshot per hour
+    // Group by hour: keep the latest (most recent) snapshot per hour
     const byHour = new Map<number, typeof portfolioHistory.dataPoints[number]>();
     for (const point of portfolioHistory.dataPoints) {
       const date = new Date(point.timestamp);
       const hourKey = new Date(date.getFullYear(), date.getMonth(), date.getDate(), date.getHours()).getTime();
-      byHour.set(hourKey, point);
+      if (!byHour.has(hourKey)) {
+        byHour.set(hourKey, point);
+      }
     }
 
     return Array.from(byHour.entries())
@@ -372,6 +399,102 @@ export function Dashboard() {
         };
       });
   }, [portfolioHistory, historyMetric, historyPeriod]);
+
+  const pnlChartData = useMemo(() => {
+    if (!financialSnapshots || financialSnapshots.length === 0) return [];
+
+    // Use the latest snapshot as "now" to avoid impure Date.now() in render
+    const latestMs = Math.max(...financialSnapshots.map((s) => new Date(s.periodEnd).getTime()));
+    const cutoffMs = periodToMs[pnlPeriod];
+    const cutoff = cutoffMs ? latestMs - cutoffMs : 0;
+
+    const filtered = financialSnapshots.filter(
+      (s) => new Date(s.periodEnd).getTime() >= cutoff
+    );
+
+    const getValue = (s: typeof financialSnapshots[number]) => {
+      switch (pnlMetric) {
+        case "netIncome": return s.netIncome;
+        case "interestIncome": return s.interestIncome;
+        case "interestExpense": return s.interestExpense;
+        case "provisionForLosses": return s.provisionForLosses;
+        case "operatingExpenses": return s.operatingExpenses;
+      }
+    };
+
+    if (pnlPeriod === "1h") {
+      return filtered.map((s) => {
+        const date = new Date(s.periodEnd);
+        return {
+          timestamp: date,
+          value: getValue(s),
+          label: date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
+        };
+      });
+    }
+
+    // Group by hour for longer periods — keep the latest snapshot per hour
+    const byHour = new Map<number, typeof financialSnapshots[number]>();
+    for (const s of filtered) {
+      const date = new Date(s.periodEnd);
+      const hourKey = new Date(date.getFullYear(), date.getMonth(), date.getDate(), date.getHours()).getTime();
+      if (!byHour.has(hourKey)) {
+        byHour.set(hourKey, s);
+      }
+    }
+
+    return Array.from(byHour.entries())
+      .sort(([a], [b]) => a - b)
+      .map(([hourKey, s]) => {
+        const date = new Date(hourKey);
+        return {
+          timestamp: date,
+          value: getValue(s),
+          label: date.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+        };
+      });
+  }, [financialSnapshots, pnlMetric, pnlPeriod]);
+
+  const [pnlRateView, setPnlRateView] = useState<PnlRateView>("day");
+
+  const pnlSummary = useMemo(() => {
+    if (!financialSnapshots || financialSnapshots.length === 0) return null;
+
+    const sorted = [...financialSnapshots].sort(
+      (a, b) => new Date(a.periodEnd).getTime() - new Date(b.periodEnd).getTime()
+    );
+    const latest = sorted[sorted.length - 1];
+
+    // Filter to snapshots within the selected window, using latest snapshot as reference
+    const latestMs = new Date(latest.periodEnd).getTime();
+    const cutoff = latestMs - pnlWindowMs[pnlRateView];
+    const windowSnapshots = sorted.filter(
+      (s) => new Date(s.periodEnd).getTime() >= cutoff
+    );
+
+    type PnlField = "interestIncome" | "interestExpense" | "provisionForLosses" | "operatingExpenses" | "netIncome";
+    const sumField = (field: PnlField) =>
+      windowSnapshots.reduce((sum, s) => sum + s[field], 0);
+
+    return {
+      latest,
+      windowTotal: {
+        interestIncome: sumField("interestIncome"),
+        interestExpense: sumField("interestExpense"),
+        provisionForLosses: sumField("provisionForLosses"),
+        operatingExpenses: sumField("operatingExpenses"),
+        netIncome: sumField("netIncome"),
+      },
+    };
+  }, [financialSnapshots, pnlRateView]);
+
+  const pnlColor: Record<PnlMetric, "green" | "cyan" | "red" | "amber"> = {
+    netIncome: "green",
+    interestIncome: "cyan",
+    interestExpense: "red",
+    provisionForLosses: "red",
+    operatingExpenses: "amber",
+  };
 
   if (isLoading) {
     return (
@@ -650,6 +773,206 @@ export function Dashboard() {
                   )}
                 </Tabs>
               </Panel>
+
+              <Panel
+                title="INCOME STATEMENT"
+                headerColor="green"
+                headerRight={
+                  <select
+                    value={pnlPeriod}
+                    onChange={(e) => setPnlPeriod(e.target.value as typeof pnlPeriod)}
+                    className="bg-secondary text-foreground text-xs font-mono border border-border px-2 py-1 rounded"
+                  >
+                    <option value="1h">1 Hour</option>
+                    <option value="12h">12 Hours</option>
+                    <option value="1d">1 Day</option>
+                    <option value="7d">7 Days</option>
+                    <option value="30d">30 Days</option>
+                    <option value="90d">90 Days</option>
+                    <option value="1y">1 Year</option>
+                    <option value="all">All Time</option>
+                  </select>
+                }
+              >
+                <Tabs value={pnlMetric} onValueChange={(v) => setPnlMetric(v as PnlMetric)}>
+                  <TabsList className="bg-secondary border-0 h-auto p-0 mb-2">
+                    <TabsTrigger
+                      value="netIncome"
+                      className="data-[state=active]:bg-transparent data-[state=active]:text-bloomberg-green data-[state=active]:border-b data-[state=active]:border-bloomberg-green rounded-none px-3 py-1 text-xs font-mono uppercase"
+                    >
+                      Net Income
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="interestIncome"
+                      className="data-[state=active]:bg-transparent data-[state=active]:text-bloomberg-cyan data-[state=active]:border-b data-[state=active]:border-bloomberg-cyan rounded-none px-3 py-1 text-xs font-mono uppercase"
+                    >
+                      Interest Income
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="interestExpense"
+                      className="data-[state=active]:bg-transparent data-[state=active]:text-bloomberg-red data-[state=active]:border-b data-[state=active]:border-bloomberg-red rounded-none px-3 py-1 text-xs font-mono uppercase"
+                    >
+                      Interest Expense
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="provisionForLosses"
+                      className="data-[state=active]:bg-transparent data-[state=active]:text-bloomberg-red data-[state=active]:border-b data-[state=active]:border-bloomberg-red rounded-none px-3 py-1 text-xs font-mono uppercase"
+                    >
+                      Default Losses
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="operatingExpenses"
+                      className="data-[state=active]:bg-transparent data-[state=active]:text-bloomberg-amber data-[state=active]:border-b data-[state=active]:border-bloomberg-amber rounded-none px-3 py-1 text-xs font-mono uppercase"
+                    >
+                      Operating Expenses
+                    </TabsTrigger>
+                  </TabsList>
+                  {isFinancialsLoading ? (
+                    <div className="h-[120px] flex items-center justify-center text-muted-foreground text-sm font-mono">
+                      Loading...
+                    </div>
+                  ) : (
+                    <TimeSeriesChart
+                      data={pnlChartData}
+                      color={pnlColor[pnlMetric]}
+                      height={120}
+                      minTimeSpanMs={periodToMs[pnlPeriod]}
+                    />
+                  )}
+                </Tabs>
+              </Panel>
+
+              {pnlSummary && (
+                <BloombergGrid cols={2} gap="sm">
+                  <Panel title="P&L BREAKDOWN" headerColor="cyan">
+                    <Tabs value={pnlRateView} onValueChange={(v) => setPnlRateView(v as PnlRateView)}>
+                      <TabsList className="bg-secondary border-0 h-auto p-0 mb-2">
+                        {(["day", "week", "month", "year"] as const).map((view) => (
+                          <TabsTrigger
+                            key={view}
+                            value={view}
+                            className="data-[state=active]:bg-transparent data-[state=active]:text-bloomberg-cyan data-[state=active]:border-b data-[state=active]:border-bloomberg-cyan rounded-none px-3 py-1 text-xs font-mono uppercase"
+                          >
+                            {view}
+                          </TabsTrigger>
+                        ))}
+                      </TabsList>
+                    </Tabs>
+                    <DataGrid>
+                      <DataGridHeader>
+                        <tr>
+                          <DataGridHead>Line Item</DataGridHead>
+                          <DataGridHead className="text-right">Last Collection</DataGridHead>
+                          <DataGridHead className="text-right">{pnlWindowLabel[pnlRateView]}</DataGridHead>
+                        </tr>
+                      </DataGridHeader>
+                      <DataGridBody>
+                        <DataGridRow>
+                          <DataGridCell variant="highlight">Interest Income</DataGridCell>
+                          <DataGridCell numeric variant="positive">
+                            {formatCurrency(pnlSummary.latest.interestIncome)}
+                          </DataGridCell>
+                          <DataGridCell numeric variant="positive">
+                            {formatCurrency(pnlSummary.windowTotal.interestIncome)}
+                          </DataGridCell>
+                        </DataGridRow>
+                        <DataGridRow>
+                          <DataGridCell variant="highlight">Interest Expense</DataGridCell>
+                          <DataGridCell numeric variant="negative">
+                            {formatCurrency(pnlSummary.latest.interestExpense)}
+                          </DataGridCell>
+                          <DataGridCell numeric variant="negative">
+                            {formatCurrency(pnlSummary.windowTotal.interestExpense)}
+                          </DataGridCell>
+                        </DataGridRow>
+                        <DataGridRow>
+                          <DataGridCell variant="highlight">Default Losses</DataGridCell>
+                          <DataGridCell numeric variant="negative">
+                            {formatCurrency(pnlSummary.latest.provisionForLosses)}
+                          </DataGridCell>
+                          <DataGridCell numeric variant="negative">
+                            {formatCurrency(pnlSummary.windowTotal.provisionForLosses)}
+                          </DataGridCell>
+                        </DataGridRow>
+                        <DataGridRow>
+                          <DataGridCell variant="highlight">Operating Expenses</DataGridCell>
+                          <DataGridCell numeric variant="negative">
+                            {formatCurrency(pnlSummary.latest.operatingExpenses)}
+                          </DataGridCell>
+                          <DataGridCell numeric variant="negative">
+                            {formatCurrency(pnlSummary.windowTotal.operatingExpenses)}
+                          </DataGridCell>
+                        </DataGridRow>
+                        <DataGridRow>
+                          <DataGridCell variant="highlight" className="font-bold">
+                            Net Income
+                          </DataGridCell>
+                          <DataGridCell
+                            numeric
+                            className="font-bold"
+                            variant={pnlSummary.latest.netIncome >= 0 ? "positive" : "negative"}
+                          >
+                            {formatCurrency(pnlSummary.latest.netIncome)}
+                          </DataGridCell>
+                          <DataGridCell
+                            numeric
+                            className="font-bold"
+                            variant={pnlSummary.windowTotal.netIncome >= 0 ? "positive" : "negative"}
+                          >
+                            {formatCurrency(pnlSummary.windowTotal.netIncome)}
+                          </DataGridCell>
+                        </DataGridRow>
+                      </DataGridBody>
+                    </DataGrid>
+                  </Panel>
+
+                  <Panel title="KEY RATIOS" headerColor="amber">
+                    <div className="space-y-1">
+                      <StatRow
+                        label="Net Interest Margin"
+                        value={pnlSummary.latest.netInterestMargin * 100}
+                        format="percent"
+                        variant={pnlSummary.latest.netInterestMargin > 0 ? "positive" : "negative"}
+                      />
+                      <StatRow
+                        label="Return on Equity"
+                        value={pnlSummary.latest.returnOnEquity * 100}
+                        format="percent"
+                        variant={pnlSummary.latest.returnOnEquity > 0 ? "positive" : "negative"}
+                      />
+                      <StatRow
+                        label="Capital Ratio"
+                        value={pnlSummary.latest.capitalRatio * 100}
+                        format="percent"
+                        variant={pnlSummary.latest.capitalRatio >= 0.08 ? "positive" : "negative"}
+                      />
+                      <StatRow
+                        label="Default Rate"
+                        value={pnlSummary.latest.defaultRate * 100}
+                        format="percent"
+                        variant={pnlSummary.latest.defaultRate < 0.05 ? "positive" : "negative"}
+                      />
+                      <div className="border-t border-border my-2" />
+                      <StatRow
+                        label="Net Interest Income"
+                        value={pnlSummary.latest.netInterestIncome}
+                        format="currency"
+                        variant={pnlSummary.latest.netInterestIncome > 0 ? "positive" : "negative"}
+                      />
+                      <StatRow
+                        label="Total Assets"
+                        value={pnlSummary.latest.totalAssets}
+                        format="currency"
+                      />
+                      <StatRow
+                        label="Loan Loss Reserve"
+                        value={pnlSummary.latest.loanLossReserve}
+                        format="currency"
+                      />
+                    </div>
+                  </Panel>
+                </BloombergGrid>
+              )}
             </div>
           </TabsContent>
 
