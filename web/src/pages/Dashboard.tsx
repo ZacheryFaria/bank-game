@@ -140,6 +140,25 @@ export function Dashboard() {
     limit: 50,
   });
 
+  // Group transactions that share the same timestamp and type into single rows
+  const groupedTransactions = useMemo(() => {
+    if (!txnData?.transactions) return [];
+
+    const groups = new Map<string, { key: string; timestamp: string; type: string; amount: number; count: number }>();
+    for (const txn of txnData.transactions) {
+      const ts = new Date(txn.timestamp).toISOString();
+      const groupKey = `${ts}|${txn.type}`;
+      const existing = groups.get(groupKey);
+      if (existing) {
+        existing.amount += txn.amount;
+        existing.count += 1;
+      } else {
+        groups.set(groupKey, { key: groupKey, timestamp: ts, type: txn.type, amount: txn.amount, count: 1 });
+      }
+    }
+    return Array.from(groups.values());
+  }, [txnData?.transactions]);
+
   // Initialize rates from bank data when available
   useEffect(() => {
     if (bank?.rates && bank.rates.length > 0) {
@@ -1185,6 +1204,39 @@ export function Dashboard() {
                 </div>
               )}
 
+              {/* Summary by type */}
+              {txnData?.summary && txnData.summary.length > 0 && (
+                <Panel title="SUMMARY BY TYPE" headerColor="amber">
+                  <DataGrid>
+                    <DataGridHeader>
+                      <tr>
+                        <DataGridHead>Type</DataGridHead>
+                        <DataGridHead className="text-right">Count</DataGridHead>
+                        <DataGridHead className="text-right">Total</DataGridHead>
+                      </tr>
+                    </DataGridHeader>
+                    <DataGridBody>
+                      {txnData.summary
+                        .sort((a, b) => Math.abs(b.total) - Math.abs(a.total))
+                        .map((s) => (
+                          <DataGridRow key={s.type}>
+                            <DataGridCell variant="highlight">
+                              {formatStringWithSeparator(s.type, ' ')}
+                            </DataGridCell>
+                            <DataGridCell numeric>{s.count}</DataGridCell>
+                            <DataGridCell
+                              numeric
+                              variant={s.total > 0 ? "positive" : "negative"}
+                            >
+                              {s.total > 0 ? '+' : ''}{formatCurrency(s.total)}
+                            </DataGridCell>
+                          </DataGridRow>
+                        ))}
+                    </DataGridBody>
+                  </DataGrid>
+                </Panel>
+              )}
+
               {/* Type filter */}
               <div className="flex items-center gap-3">
                 <span className="text-xs uppercase text-muted-foreground font-mono">
@@ -1224,23 +1276,27 @@ export function Dashboard() {
                         <tr>
                           <DataGridHead>Timestamp</DataGridHead>
                           <DataGridHead>Type</DataGridHead>
+                          <DataGridHead className="text-right">Count</DataGridHead>
                           <DataGridHead className="text-right">Amount</DataGridHead>
                         </tr>
                       </DataGridHeader>
                       <DataGridBody>
-                        {txnData.transactions.map((txn) => (
-                          <DataGridRow key={txn.id}>
+                        {groupedTransactions.map((row) => (
+                          <DataGridRow key={row.key}>
                             <DataGridCell>
-                              {new Date(txn.timestamp).toLocaleString()}
+                              {new Date(row.timestamp).toLocaleString()}
                             </DataGridCell>
                             <DataGridCell variant="highlight">
-                              {formatStringWithSeparator(txn.type, ' ')}
+                              {formatStringWithSeparator(row.type, ' ')}
+                            </DataGridCell>
+                            <DataGridCell numeric>
+                              {row.count > 1 ? row.count : ''}
                             </DataGridCell>
                             <DataGridCell
                               numeric
-                              variant={txn.amount > 0 ? "positive" : "negative"}
+                              variant={row.amount > 0 ? "positive" : "negative"}
                             >
-                              {txn.amount > 0 ? '+' : ''}{formatCurrency(txn.amount)}
+                              {row.amount > 0 ? '+' : ''}{formatCurrency(row.amount)}
                             </DataGridCell>
                           </DataGridRow>
                         ))}
@@ -1277,39 +1333,6 @@ export function Dashboard() {
                   </>
                 )}
               </Panel>
-
-              {/* Summary by type */}
-              {txnData?.summary && txnData.summary.length > 0 && (
-                <Panel title="SUMMARY BY TYPE" headerColor="amber">
-                  <DataGrid>
-                    <DataGridHeader>
-                      <tr>
-                        <DataGridHead>Type</DataGridHead>
-                        <DataGridHead className="text-right">Count</DataGridHead>
-                        <DataGridHead className="text-right">Total</DataGridHead>
-                      </tr>
-                    </DataGridHeader>
-                    <DataGridBody>
-                      {txnData.summary
-                        .sort((a, b) => Math.abs(b.total) - Math.abs(a.total))
-                        .map((s) => (
-                          <DataGridRow key={s.type}>
-                            <DataGridCell variant="highlight">
-                              {formatStringWithSeparator(s.type, ' ')}
-                            </DataGridCell>
-                            <DataGridCell numeric>{s.count}</DataGridCell>
-                            <DataGridCell
-                              numeric
-                              variant={s.total > 0 ? "positive" : "negative"}
-                            >
-                              {s.total > 0 ? '+' : ''}{formatCurrency(s.total)}
-                            </DataGridCell>
-                          </DataGridRow>
-                        ))}
-                    </DataGridBody>
-                  </DataGrid>
-                </Panel>
-              )}
             </div>
           </TabsContent>
         </Tabs>
