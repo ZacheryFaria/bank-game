@@ -85,10 +85,9 @@ const TimeSeriesChart = React.forwardRef<HTMLDivElement, TimeSeriesChartProps>(
 
     const times = data.map((d) => d.timestamp.getTime());
     let minTime = Math.min(...times);
-    let maxTime = Math.max(...times);
-    // Enforce minimum time span on the x-axis
+    const maxTime = Math.max(...times);
+    // Enforce minimum time span on the x-axis, anchoring data to the right edge
     if (minTimeSpanMs && maxTime - minTime < minTimeSpanMs) {
-      maxTime = Math.max(maxTime, Date.now());
       minTime = maxTime - minTimeSpanMs;
     }
     const timeRange = maxTime - minTime || 1;
