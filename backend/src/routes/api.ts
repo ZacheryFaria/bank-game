@@ -9,6 +9,7 @@ import * as portfolioLogic from "../logic/portfolio.js";
 import prisma from "../lib/db.js";
 import {
   MARKET_RATES,
+  TIME_MULTIPLIER,
   LOAN_PRODUCTS,
   DEPOSIT_PRODUCTS,
 } from "../engine/constants.js";
@@ -212,6 +213,7 @@ export const router = s.router(contract, {
         status: 200,
         body: {
           rates: MARKET_RATES,
+          timeMultiplier: TIME_MULTIPLIER,
           loanProducts: Object.entries(LOAN_PRODUCTS).map(
             ([product, config]) => ({
               product,

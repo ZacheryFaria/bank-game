@@ -174,6 +174,7 @@ const DepositProductInfoSchema = z.object({
 
 const MarketRatesSchema = z.object({
   rates: z.record(z.string(), z.number()),
+  timeMultiplier: z.number(),
   loanProducts: z.array(LoanProductInfoSchema),
   depositProducts: z.array(DepositProductInfoSchema),
 });

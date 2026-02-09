@@ -1,5 +1,6 @@
 import { PrismaClient, LoanBucket } from "@prisma/client";
 import type { CollectionReport } from "../engine/types.js";
+import { TIME_MULTIPLIER } from "../engine/constants.js";
 
 type PrismaTransaction = Omit<
   PrismaClient,
@@ -115,7 +116,8 @@ export async function generateSnapshot(
 
   // 4. Calculate key ratios (annualized dynamically based on collection period)
   // Cap at 4 (minimum 1-hour period) to prevent DECIMAL(5,4) overflow
-  const annualizationFactor = realHoursElapsed >= 1 ? 4 / realHoursElapsed : 4;
+  const effectiveHours = realHoursElapsed * TIME_MULTIPLIER;
+  const annualizationFactor = effectiveHours >= 1 ? 4 / effectiveHours : 4;
 
   const capitalRatio = totalAssets > 0 ? totalEquity / totalAssets : 0;
 
