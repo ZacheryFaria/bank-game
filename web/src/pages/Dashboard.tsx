@@ -134,18 +134,6 @@ export function Dashboard() {
   // Transaction ledger state
   const [txnTypeFilter, setTxnTypeFilter] = useState<string | undefined>(undefined);
   const [txnPage, setTxnPage] = useState(1);
-  const [txnSortField, setTxnSortField] = useState<'timestamp' | 'type' | 'count' | 'amount'>('timestamp');
-  const [txnSortDir, setTxnSortDir] = useState<'asc' | 'desc'>('desc');
-  const toggleTxnSort = (field: typeof txnSortField) => {
-    if (txnSortField === field) {
-      setTxnSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-    } else {
-      setTxnSortField(field);
-      setTxnSortDir(field === 'timestamp' ? 'desc' : 'asc');
-    }
-  };
-  const sortIndicator = (field: typeof txnSortField) =>
-    txnSortField === field ? (txnSortDir === 'asc' ? ' \u25B2' : ' \u25BC') : '';
   const { data: txnData, isLoading: isTxnLoading } = useTransactions({
     type: txnTypeFilter,
     page: txnPage,
@@ -169,18 +157,23 @@ export function Dashboard() {
       }
     }
 
+    const typeOrder: Record<string, number> = {
+      deposit_inflow: 0,
+      loan_origination: 1,
+      interest_income: 2,
+      interest_expense: 3,
+      loan_default: 4,
+      operating_expense: 5,
+    };
+
     const rows = Array.from(groups.values());
-    const dir = txnSortDir === 'asc' ? 1 : -1;
     rows.sort((a, b) => {
-      switch (txnSortField) {
-        case 'timestamp': return dir * (new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-        case 'type': return dir * a.type.localeCompare(b.type);
-        case 'count': return dir * (a.count - b.count);
-        case 'amount': return dir * (a.amount - b.amount);
-      }
+      const timeDiff = new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+      if (timeDiff !== 0) return timeDiff;
+      return (typeOrder[a.type] ?? 99) - (typeOrder[b.type] ?? 99);
     });
     return rows;
-  }, [txnData?.transactions, txnSortField, txnSortDir]);
+  }, [txnData?.transactions]);
 
   // Initialize rates from bank data when available
   useEffect(() => {
@@ -1297,18 +1290,10 @@ export function Dashboard() {
                     <DataGrid>
                       <DataGridHeader>
                         <tr>
-                          <DataGridHead className="cursor-pointer select-none" onClick={() => toggleTxnSort('timestamp')}>
-                            Timestamp{sortIndicator('timestamp')}
-                          </DataGridHead>
-                          <DataGridHead className="cursor-pointer select-none" onClick={() => toggleTxnSort('type')}>
-                            Type{sortIndicator('type')}
-                          </DataGridHead>
-                          <DataGridHead className="text-right cursor-pointer select-none" onClick={() => toggleTxnSort('count')}>
-                            Count{sortIndicator('count')}
-                          </DataGridHead>
-                          <DataGridHead className="text-right cursor-pointer select-none" onClick={() => toggleTxnSort('amount')}>
-                            Amount{sortIndicator('amount')}
-                          </DataGridHead>
+                          <DataGridHead>Timestamp</DataGridHead>
+                          <DataGridHead>Type</DataGridHead>
+                          <DataGridHead className="text-right">Count</DataGridHead>
+                          <DataGridHead className="text-right">Amount</DataGridHead>
                         </tr>
                       </DataGridHeader>
                       <DataGridBody>
