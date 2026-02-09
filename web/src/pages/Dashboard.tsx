@@ -598,7 +598,7 @@ export function Dashboard() {
 
           <TabsContent value="rates" className="flex-1 m-0 overflow-auto">
             <div className="p-4 space-y-6">
-              <Panel title="Loan Product Rates" headerColor="blue">
+              <Panel title="Loan Yields" headerColor="blue">
                 <div className="space-y-6 p-2">
                   {/* Mortgage */}
                   <div>
@@ -627,6 +627,9 @@ export function Dashboard() {
                       <span>1%</span>
                       <span>8%</span>
                       <span>15%</span>
+                    </div>
+                    <div className="text-xs text-bloomberg-green mt-1 font-mono">
+                      Earns {formatCurrency(rates.mortgage * 250)}/hr per $100k
                     </div>
                   </div>
 
@@ -658,6 +661,9 @@ export function Dashboard() {
                       <span>10%</span>
                       <span>20%</span>
                     </div>
+                    <div className="text-xs text-bloomberg-green mt-1 font-mono">
+                      Earns {formatCurrency(rates.auto * 250)}/hr per $100k
+                    </div>
                   </div>
 
                   {/* Personal */}
@@ -687,6 +693,9 @@ export function Dashboard() {
                       <span>5%</span>
                       <span>15%</span>
                       <span>30%</span>
+                    </div>
+                    <div className="text-xs text-bloomberg-green mt-1 font-mono">
+                      Earns {formatCurrency(rates.personal * 250)}/hr per $100k
                     </div>
                   </div>
 
@@ -718,11 +727,14 @@ export function Dashboard() {
                       <span>25%</span>
                       <span>40%</span>
                     </div>
+                    <div className="text-xs text-bloomberg-green mt-1 font-mono">
+                      Earns {formatCurrency(rates.credit_card * 250)}/hr per $100k
+                    </div>
                   </div>
                 </div>
               </Panel>
 
-              <Panel title="Deposit Product Rates" headerColor="green">
+              <Panel title="Deposit Costs" headerColor="green">
                 <div className="space-y-6 p-2">
                   {/* Savings */}
                   <div>
@@ -753,6 +765,9 @@ export function Dashboard() {
                       <span>5%</span>
                       <span>10%</span>
                     </div>
+                    <div className="text-xs text-bloomberg-red mt-1 font-mono">
+                      Costs {formatCurrency(rates.savings * 250)}/hr per $100k
+                    </div>
                   </div>
 
                   {/* CD */}
@@ -782,6 +797,9 @@ export function Dashboard() {
                       <span>0%</span>
                       <span>5%</span>
                       <span>10%</span>
+                    </div>
+                    <div className="text-xs text-bloomberg-red mt-1 font-mono">
+                      Costs {formatCurrency(rates.cd * 250)}/hr per $100k
                     </div>
                   </div>
 

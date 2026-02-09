@@ -1,10 +1,10 @@
 # Bank Game Configuration
 # Game mechanics and balance settings
 
-# Time conversion: 1 real hour = 1 game quarter (3 months)
+# Time conversion: 1 real hour = 1 game quarter (3 months) at multiplier 1
 time:
-  multiplier: 2190 # hours in a quarter
-  maxIdleHours: 24 # Maximum idle time cap (maxIdleQuarters computed from this)
+  multiplier: 1 # Game speed factor (1 = default, 2 = double speed)
+  maxIdleHours: 24 # Maximum idle time cap
 
 # Rate limiting
 rateLimit:
